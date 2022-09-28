@@ -4,6 +4,7 @@
 
 mod commands;
 mod components;
+mod generate_components;
 
 use commands::*;
 use components::*;

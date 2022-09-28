@@ -7,6 +7,7 @@ use serenity::prelude::*;
 pub async fn handle_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     // Add any custom components here
     match component.data.custom_id.as_str() {
+        s if s.starts_with("numpad_") => numpad_component(ctx, component).await,
         "refresh_ping" => ping_refresh_component(ctx, component).await,
         _ => nyi_component(ctx, component).await
     }
@@ -32,6 +33,17 @@ async fn ping_refresh_component(ctx: Context, component: MessageComponentInterac
     // This does not remove the refresh component from the original message.
     component.edit_original_interaction_response(&ctx.http, |response| {
         response.content(duration)
+    }).await?;
+    Ok(())
+}
+
+async fn numpad_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    // let num = component.data.custom_id.chars().last().unwrap(); //.to_digit(10).unwrap();
+    component.create_interaction_response(&ctx.http, |response| {
+        response.kind(InteractionResponseType::UpdateMessage)
+            .interaction_response_data(|message| {
+                message.content(&component.data.custom_id)
+            })
     }).await?;
     Ok(())
 }

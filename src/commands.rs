@@ -1,4 +1,5 @@
 use crate::ADMIN_USERS;
+use crate::generate_components::*;
 
 use std::time::Instant;
 
@@ -36,6 +37,9 @@ pub fn create_commands(commands: &mut CreateApplicationCommands) -> &mut CreateA
         .create_application_command(|command| {
             command.name("shutdown").description("Shut down the bot")
         })
+        .create_application_command(|command| {
+            command.name("numpad").description("brings up a numpad")
+        })
 }
 // Any custom slash commands must be added both to create_commands ^^^ and to handle_command!!
 pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction) -> Result<(), SerenityError> {
@@ -44,6 +48,7 @@ pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction)
         "help" => help_command(ctx, command).await,
         "ping" => ping_command(ctx, command).await,
         "shutdown" => shutdown_command(ctx, command).await,
+        "numpad" => numpad_command(ctx, command).await,
         _ => nyi_command(ctx, command).await
     }
 }
@@ -111,4 +116,16 @@ async fn shutdown_command(ctx: Context, command: ApplicationCommandInteraction) 
     // I'm pretty sure this is unnecessary but it makes me happier than not doing it
     ctx.shard.shutdown_clean();
     Ok(())
+}
+
+async fn numpad_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> {
+    command.create_interaction_response(&ctx.http, |response| {
+        response.kind(InteractionResponseType::ChannelMessageWithSource)
+            .interaction_response_data(|message| {
+                message.content("numpad :)")
+                .components(|components| {
+                    make_numpad_rows(components)
+                })
+            })
+        }).await
 }
