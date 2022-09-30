@@ -7,8 +7,9 @@ use serenity::prelude::*;
 pub async fn handle_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     // Add any custom components here
     match component.data.custom_id.as_str() {
+        s if s.starts_with("X") => disabled_component(ctx, component).await,
         s if s.starts_with("numpad_") => numpad_component(ctx, component).await,
-        "refresh_ping" => ping_refresh_component(ctx, component).await,
+        "ping_refresh" => ping_refresh_component(ctx, component).await,
         _ => nyi_component(ctx, component).await
     }
 }
@@ -21,6 +22,17 @@ async fn nyi_component(ctx: Context, component: MessageComponentInteraction) -> 
             })
     })
     .await
+}
+
+async fn disabled_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    let mut content = component.user.mention().to_string();
+    content.push_str(" Greyed out buttons do not do anything. If you made a mistake, press `Undo` ↩ / `Reset` 🔄");
+    component.create_interaction_response(ctx.http, |response| {
+        response.kind(InteractionResponseType::UpdateMessage)
+            .interaction_response_data(|message| {
+                message.content(content)
+            })
+    }).await
 }
 
 async fn ping_refresh_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
@@ -44,6 +56,5 @@ async fn numpad_component(ctx: Context, component: MessageComponentInteraction) 
             .interaction_response_data(|message| {
                 message.content(&component.data.custom_id)
             })
-    }).await?;
-    Ok(())
+    }).await
 }

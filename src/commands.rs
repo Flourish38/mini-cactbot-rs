@@ -84,11 +84,7 @@ async fn ping_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         .components(|components| {
             components
                 .create_action_row(|action_row| {
-                    action_row.create_button(|button| {
-                        button.style(ButtonStyle::Secondary)
-                            .emoji('🔄')
-                            .custom_id("refresh_ping")
-                    })
+                    make_button(action_row, "ping_refresh", ButtonStyle::Secondary, "🔄")
                 })
         })
     }).await?;
@@ -124,7 +120,8 @@ async fn numpad_command(ctx: Context, command: ApplicationCommandInteraction) ->
             .interaction_response_data(|message| {
                 message.content("numpad :)")
                 .components(|components| {
-                    make_numpad_rows(components)
+                    make_numpad_rows(components);
+                    make_reset_bar(components)
                 })
             })
         }).await

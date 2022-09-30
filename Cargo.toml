@@ -1,5 +1,5 @@
 [package]
-name = "template-bot"
+name = "mini-cactbot"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 config = "0.13.2"
+emojis = "0.4.0"
 lazy_static = "1.4.0"
 serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
