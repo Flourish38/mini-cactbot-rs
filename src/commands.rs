@@ -1,4 +1,5 @@
 use crate::ADMIN_USERS;
+use crate::game::*;
 use crate::generate_components::*;
 
 use std::time::Instant;
@@ -40,6 +41,9 @@ pub fn create_commands(commands: &mut CreateApplicationCommands) -> &mut CreateA
         .create_application_command(|command| {
             command.name("numpad").description("brings up a numpad")
         })
+        .create_application_command(|command| {
+            command.name("play").description("Play the game!")
+        })
 }
 // Any custom slash commands must be added both to create_commands ^^^ and to handle_command!!
 pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction) -> Result<(), SerenityError> {
@@ -49,6 +53,7 @@ pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction)
         "ping" => ping_command(ctx, command).await,
         "shutdown" => shutdown_command(ctx, command).await,
         "numpad" => numpad_command(ctx, command).await,
+        "play" => play_command(ctx, command).await,
         _ => nyi_command(ctx, command).await
     }
 }
@@ -84,7 +89,7 @@ async fn ping_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         .components(|components| {
             components
                 .create_action_row(|action_row| {
-                    make_button(action_row, "ping_refresh", ButtonStyle::Secondary, "🔄")
+                    make_button(action_row, "ping_refresh", ButtonStyle::Secondary, Some("🔄"), None)
                 })
         })
     }).await?;
@@ -120,9 +125,29 @@ async fn numpad_command(ctx: Context, command: ApplicationCommandInteraction) ->
             .interaction_response_data(|message| {
                 message.content("numpad :)")
                 .components(|components| {
-                    make_numpad_rows(components);
-                    make_reset_bar(components)
+                    make_numpad_rows(components, &Game::new());
+                    make_reset_bar(components, &Game::new())
                 })
             })
         }).await
+}
+
+async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> { 
+    let mut active_games = ACTIVE_GAMES.lock().await;
+    if active_games.contains_key(&command.user.id) {
+        return send_interaction_response_message(&ctx, &command, "You already have a game started!", true).await
+    }
+    let game = Game::new();
+    command.create_interaction_response(&ctx.http, |response| {
+        response.kind(InteractionResponseType::ChannelMessageWithSource)
+            .interaction_response_data(|message| {
+                message.content("hewwo :3")
+                    .components(|components| {
+                        make_game_rows(components, &game);
+                        make_reset_bar(components, &game)
+                    })
+            })
+    }).await?;
+    active_games.insert(command.user.id, game);
+    Ok(())
 }

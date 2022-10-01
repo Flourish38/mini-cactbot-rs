@@ -1,4 +1,4 @@
-mod payout;
+pub mod payout;
 
 use std::collections::HashMap;
 
@@ -57,7 +57,7 @@ impl Game{
     }
 
     pub fn last_action(&self) -> Action {
-        let i: usize = self.index();
+        let i = self.index();
         if i == 4 | 8 | 12 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 0) {
             EnterPayout(self.payout_history[i/4 - 1])
         } else if self.position_history[i] != 0 {
