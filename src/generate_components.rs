@@ -33,9 +33,9 @@ pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -
         components.create_action_row(|action_row| {
             for i in (3*j+1)..(3*j+4) {
                 if game.used_numbers().contains(&i) {
-                    make_button(action_row, format!("X_numpad_{}", i), ButtonStyle::Secondary, None, Some(" "));
+                    make_button(action_row, format!("X_minicact_numpad_{}", i), ButtonStyle::Secondary, None, Some(" "));
                 } else {
-                    make_button(action_row, format!("numpad_{}", i), ButtonStyle::Primary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(i)]), None);
+                    make_button(action_row, format!("minicact_numpad_{}", i), ButtonStyle::Primary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(i)]), None);
                 }
             }
             action_row
@@ -49,9 +49,9 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> 
         components.create_action_row(|action_row| {
             for i in (j..(j+7)).step_by(3) {  // I'm keeping the column-major ordering from julia for easier integration
                 if let Some(k) = game.used_positions().iter().position(|a| a == &i) {
-                    make_button(action_row, format!("X_game_{}", i), ButtonStyle::Secondary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(game.used_numbers()[k])]), None);
+                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(game.used_numbers()[k])]), None);
                 } else {
-                    make_button(action_row, format!("game_{}", i), ButtonStyle::Primary, Some("🟡"), None);
+                    make_button(action_row, format!("minicact_game_{}", i), ButtonStyle::Primary, Some("🟡"), None);
                 }
             }
             action_row
@@ -61,9 +61,13 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> 
 }
 
 pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> &'a mut CreateComponents {
+    let action = game.last_action();
     components.create_action_row(|action_row| {
-        make_button(action_row, "undo", ButtonStyle::Primary, Some("↩"), None);
-        match game.last_action() {
+        match action {
+            Start => make_button(action_row, "X_undo", ButtonStyle::Secondary, Some("↩"), None),
+            _ => make_button(action_row, "undo", ButtonStyle::Primary, Some("↩"), None)
+        };
+        match action {
             ChoosePosition(pos) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(POSITION_EMOJI[<usize as From<u8>>::from(pos)]), None),
             RevealNumber(num) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(num)]), None),
             EnterPayout(p) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, None, Some(<u16 as From<Payout>>::from(p).to_string().as_str())),

@@ -148,6 +148,8 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
                     })
             })
     }).await?;
+    // Rust is a beautiful language...
+    // I have to make sure that the message returns successfully before I can put the game into active_games.
     active_games.insert(command.user.id, game);
     Ok(())
 }
