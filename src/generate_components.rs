@@ -35,7 +35,7 @@ pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -
                 if game.used_numbers().contains(&i) {
                     make_button(action_row, format!("X_minicact_numpad_{}", i), ButtonStyle::Secondary, None, Some(" "));
                 } else {
-                    make_button(action_row, format!("minicact_numpad_{}", i), ButtonStyle::Primary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(i)]), None);
+                    make_button(action_row, format!("minicact_numpad_{}", i), ButtonStyle::Primary, Some(NUMBER_EMOJI[i as usize]), None);
                 }
             }
             action_row
@@ -49,7 +49,9 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> 
         components.create_action_row(|action_row| {
             for i in (j..(j+7)).step_by(3) {  // I'm keeping the column-major ordering from julia for easier integration
                 if let Some(k) = game.used_positions().iter().position(|a| a == &i) {
-                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(game.used_numbers()[k])]), None);
+                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);
+                } else if let EnterPayout(_) = game.next_action(){
+                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some("🟡"), None);
                 } else {
                     make_button(action_row, format!("minicact_game_{}", i), ButtonStyle::Primary, Some("🟡"), None);
                 }
@@ -60,6 +62,25 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> 
     components
 }
 
+pub fn make_payout_dropdown<'a>(components: &'a mut CreateComponents) -> &'a mut CreateComponents {
+    components.create_action_row(|action_row| {
+        action_row.create_select_menu(|menu| {
+            menu.custom_id("minicact_payouts")
+                .placeholder("Enter your payout!")
+                .options(|options| {
+                    for i in 1..17 {
+                        options.create_option(|option|{
+                            option
+                                .label(PAYOUT_VALUES[i])
+                                .value(PAYOUT_VALUES[i])
+                        });
+                    }
+                    options
+                })
+        })
+    })
+}
+
 pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> &'a mut CreateComponents {
     let action = game.last_action();
     components.create_action_row(|action_row| {
@@ -68,9 +89,16 @@ pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> 
             _ => make_button(action_row, "undo", ButtonStyle::Primary, Some("↩"), None)
         };
         match action {
-            ChoosePosition(pos) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(POSITION_EMOJI[<usize as From<u8>>::from(pos)]), None),
-            RevealNumber(num) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(NUMBER_EMOJI[<usize as From<u8>>::from(num)]), None),
-            EnterPayout(p) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, None, Some(<u16 as From<Payout>>::from(p).to_string().as_str())),
+            ChoosePosition(pos) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(POSITION_EMOJI[pos as usize]), None),
+            RevealNumber(num) => make_button(action_row, "X_last_input", ButtonStyle::Secondary, Some(NUMBER_EMOJI[num as usize]), None),
+            EnterPayout(p) => {
+                if let Done = game.next_action() {
+                    make_button(action_row, "last_input", ButtonStyle::Success, None, Some(p.to_string().as_str()))
+                } else {
+                    make_button(action_row, "X_last_input", ButtonStyle::Secondary, None, Some(p.to_string().as_str()))
+                }
+                
+            },
             _ => make_button(action_row, "X_last_input", ButtonStyle::Secondary, None, Some(" "))
         };
         make_button(action_row, "reset", ButtonStyle::Primary, Some("🔄"), None)

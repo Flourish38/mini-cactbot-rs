@@ -142,6 +142,7 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         response.kind(InteractionResponseType::ChannelMessageWithSource)
             .interaction_response_data(|message| {
                 message.content("hewwo :3")
+                    .ephemeral(true)
                     .components(|components| {
                         make_game_rows(components, &game);
                         make_reset_bar(components, &game)

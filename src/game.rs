@@ -47,7 +47,7 @@ impl Game{
         let i = self.index();
         if i == 12 && self.payout_history[2] != NoPayout {
             Done
-        } else if i > 3 && self.payout_history[i/4 - 1] == NoPayout {
+        } else if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] == NoPayout {
             EnterPayout(NoPayout)
         } else if self.position_history[i] != 0 {
             RevealNumber(0)
@@ -58,9 +58,9 @@ impl Game{
 
     pub fn last_action(&self) -> Action {
         let i = self.index();
-        if i > 3 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 0) {
+        if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 0) {
             EnterPayout(self.payout_history[i/4 - 1])
-        } else if self.position_history[i] != 0 {
+        } else if i < 12 && self.position_history[i] != 0 {
             ChoosePosition(self.position_history[i])
         } else if i == 0 {
             Start
@@ -97,18 +97,18 @@ impl Game{
 
     pub fn used_numbers(&self) -> &[u8] {
         let i = self.index();
-        &self.number_history[(i-i%4)..i]
+        &self.number_history[(if let EnterPayout(_) = self.next_action() {i - 4} else {i - i%4})..i]
     }
 
     pub fn used_positions(&self) -> &[u8] {
         let i = self.index();
-        &self.position_history[(i-i%4)..i]
+        &self.position_history[(if let EnterPayout(_) = self.next_action() {i - 4} else {i - i%4})..i]
     }
 
     pub fn total_payout(&self) -> u16 {
         let mut output: u16 = 0;
         for p in self.payout_history {
-            output += <u16 as From<Payout>>::from(p);
+            output += PAYOUT_VALUES[p as usize];
         }
         output
     }
