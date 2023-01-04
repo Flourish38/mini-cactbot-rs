@@ -59,3 +59,5 @@ end
 # and at least one of them can actually come up during optimal play.
 # so, I need to cover there being 10 options for results.
 # Probably going to just replace the "reset" button in cases where there are 10 results.
+
+nothing

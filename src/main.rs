@@ -6,6 +6,7 @@ mod commands;
 mod components;
 mod generate_components;
 mod game;
+mod recommendations;
 
 use commands::*;
 use components::*;

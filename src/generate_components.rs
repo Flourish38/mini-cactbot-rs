@@ -6,12 +6,23 @@ use serenity::builder::{CreateComponents, CreateActionRow};
 use serenity::model::prelude::ReactionType;
 use serenity::model::prelude::component::ButtonStyle;
 
-const NUMBER_EMOJI: &'static [&'static str; 10] = &[
-    "🟡", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"
+const NUMBER_EMOJI: [&'static str; 9] = [
+    "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"
 ];
 
-const POSITION_EMOJI: &'static [&'static str; 10] = &[
-    "🟦", "↖", "⬅", "↙", "⬆", "🇽", "⬇", "↗", "➡", "↘"
+const POSITION_EMOJI: [&'static str; 9] = [
+    "↖", "⬆", "↗", "⬅", "🇽", "➡", "↙",  "⬇", "↘"
+];
+
+const POSITION_LINE_TABLE: [[bool; 9]; 8] = [
+    [false, false, false, false, false, false, true, true, true],  // bottom row
+    [false, false, false, true, true, true, false, false, false],  // middle row
+    [true, true, true, false, false, false, false, false, false],  // top row
+    [true, false, false, false, true, false, false, false, true],  // \ diagonal
+    [true, false, false, true, false, false, true, false, false],  // left column
+    [false, true, false, false, true, false, false, true, false],  // middle column
+    [false, false, true, false, false, true, false, false, true],  // right column
+    [false, false, true, false, true, false, true, false, false],  // / diagonal
 ];
 
 pub fn make_button<'a, D: ToString>(action_row: &'a mut CreateActionRow, custom_id: D, style: ButtonStyle, emoji: Option<&str>, label: Option<&str>) -> &'a mut CreateActionRow  {
@@ -31,7 +42,7 @@ pub fn make_button<'a, D: ToString>(action_row: &'a mut CreateActionRow, custom_
 pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> &'a mut CreateComponents {
     for j in 0..3 {
         components.create_action_row(|action_row| {
-            for i in (3*j+1)..(3*j+4) {
+            for i in (3*j)..(3*j+3) {
                 if game.used_numbers().contains(&i) {
                     make_button(action_row, format!("X_minicact_numpad_{}", i), ButtonStyle::Secondary, None, Some(" "));
                 } else {
@@ -44,16 +55,23 @@ pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -
     components
 }
 
-pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game) -> &'a mut CreateComponents {
-    for j in 1..4{
+pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game, recommendation: usize) -> &'a mut CreateComponents {
+    for j in 0..3 {
         components.create_action_row(|action_row| {
-            for i in (j..(j+7)).step_by(3) {  // I'm keeping the column-major ordering from julia for easier integration
+            for i in (3*j)..(3*j+3) {
+                let payout = matches!(game.next_action(), EnterPayout(_));
+                // ugliest nest of if statements ever... but functional!
+                let payout_style = if payout && POSITION_LINE_TABLE[recommendation][i as usize] {ButtonStyle::Success} else {ButtonStyle::Secondary};
                 if let Some(k) = game.used_positions().iter().position(|a| a == &i) {
-                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);
-                } else if let EnterPayout(_) = game.next_action(){
-                    make_button(action_row, format!("X_minicact_game_{}", i), ButtonStyle::Secondary, Some("🟡"), None);
+                    make_button(action_row, format!("X_minicact_game_{}", i), 
+                    payout_style, 
+                    Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);
+                } else if payout{
+                    make_button(action_row, format!("X_minicact_game_{}", i), payout_style, Some("🟡"), None);
                 } else {
-                    make_button(action_row, format!("minicact_game_{}", i), ButtonStyle::Primary, Some("🟡"), None);
+                    make_button(action_row, format!("minicact_game_{}", i), 
+                    if i as usize == recommendation {ButtonStyle::Success} else {ButtonStyle::Primary}, 
+                    Some("🟡"), None);
                 }
             }
             action_row

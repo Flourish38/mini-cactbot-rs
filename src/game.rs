@@ -33,8 +33,8 @@ impl Game{
     pub fn new() -> Game {
         Game {
             index: 0,
-            position_history: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            number_history: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            position_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            number_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             payout_history: [NoPayout, NoPayout, NoPayout], 
         }
     }
@@ -49,18 +49,18 @@ impl Game{
             Done
         } else if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] == NoPayout {
             EnterPayout(NoPayout)
-        } else if self.position_history[i] != 0 {
-            RevealNumber(0)
+        } else if self.position_history[i] != 255 {
+            RevealNumber(255)
         } else {
-            ChoosePosition(0)
+            ChoosePosition(255)
         }
     }
 
     pub fn last_action(&self) -> Action {
         let i = self.index();
-        if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 0) {
+        if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 255) {
             EnterPayout(self.payout_history[i/4 - 1])
-        } else if i < 12 && self.position_history[i] != 0 {
+        } else if i < 12 && self.position_history[i] != 255 {
             ChoosePosition(self.position_history[i])
         } else if i == 0 {
             Start
@@ -86,9 +86,9 @@ impl Game{
         let i = self.index();
         match self.last_action() {
             EnterPayout(_) => self.payout_history[i/4 - 1] = NoPayout,
-            ChoosePosition(_) => self.position_history[i] = 0,
+            ChoosePosition(_) => self.position_history[i] = 255,
             RevealNumber(_) => {
-                self.number_history[i-1] = 0;
+                self.number_history[i-1] = 255;
                 self.index -= 1
             },
             _ => ()

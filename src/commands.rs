@@ -144,7 +144,7 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
                 message.content("hewwo :3")
                     .ephemeral(true)
                     .components(|components| {
-                        make_game_rows(components, &game);
+                        make_game_rows(components, &game, 255);
                         make_reset_bar(components, &game)
                     })
             })

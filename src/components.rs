@@ -1,6 +1,7 @@
 use crate::game::*;
 use crate::game::Action::*;
 use crate::generate_components::*;
+use crate::recommendations::*;
 
 use std::time::Instant;
 
@@ -38,8 +39,11 @@ async fn nyi_component(ctx: Context, component: MessageComponentInteraction) -> 
 }
 
 async fn disabled_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
-    let mut content = component.user.mention().to_string();
-    content.push_str(" Greyed out buttons do not do anything. If you made a mistake, press `Undo` ↩ / `Reset` 🔄");
+    let content = if component.message.content.ends_with("🔄") {
+        component.message.content.clone()
+    } else {
+        format!("{}\n{} That button is currently disabled. If you made a mistake, press `Undo` ↩ / `Reset` 🔄", component.message.content, component.user.mention())
+    };
     component.create_interaction_response(ctx.http, |response| {
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
@@ -73,15 +77,28 @@ async fn numpad_component(ctx: Context, component: MessageComponentInteraction) 
 }
 
 async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game) -> Result<(), SerenityError> {
+    let action = game.next_action();
+    let (recommendation, content) = if let ChoosePosition(_) = action {
+        recommend_position(&game)
+    } else if let EnterPayout(_) = action {
+        recommend_line(game)
+    } else {
+        let opt_i = component.message.content.find(component.user.mention().to_string().as_str());  // finds if the user hit a disabled button last time
+        let mut s = component.message.content.clone();
+        if let Some(i) = opt_i {
+            s.truncate(i)
+        };
+        (0, s)
+    };
     component.create_interaction_response(&ctx.http, |response| {
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content("")
+                message.content(content)
                     .components(|components| {
-                        match game.next_action() {
-                            ChoosePosition(_) => {make_game_rows(components, &game);},
+                        match action {
+                            ChoosePosition(_) => {make_game_rows(components, &game, recommendation);},
                             RevealNumber(_) => {make_numpad_rows(components, &game);},
-                            EnterPayout(_) => {make_game_rows(components, &game); make_payout_dropdown(components);},
+                            EnterPayout(_) => {make_game_rows(components, &game, recommendation); make_payout_dropdown(components);},
                             _ => ()
                         }
                         make_reset_bar(components, &game)
