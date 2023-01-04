@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use crate::game::payout::Payout::*;
+use crate::minicact::game::payout::Payout::*;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum Payout {

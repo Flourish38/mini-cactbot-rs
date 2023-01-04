@@ -1,6 +1,6 @@
 use crate::ADMIN_USERS;
-use crate::game::*;
 use crate::generate_components::*;
+use crate::minicact;
 
 use std::time::Instant;
 
@@ -17,7 +17,7 @@ use tokio::sync::mpsc::Sender;
 lazy_static! { pub static ref SHUTDOWN_SENDER: Mutex<Option<Sender<bool>>> = Mutex::new(None); }
 
 // for some reason if you don't specify the return type the compiler doesn't figure it out
-async fn send_interaction_response_message<D>(ctx: &Context, command: &ApplicationCommandInteraction, content: D, ephemeral: bool) -> Result<(), SerenityError> where D: ToString {
+pub async fn send_interaction_response_message<D>(ctx: &Context, command: &ApplicationCommandInteraction, content: D, ephemeral: bool) -> Result<(), SerenityError> where D: ToString {
     command.create_interaction_response(&ctx.http, |response| {
             response
                 .kind(InteractionResponseType::ChannelMessageWithSource)
@@ -37,13 +37,8 @@ pub fn create_commands(commands: &mut CreateApplicationCommands) -> &mut CreateA
         })
         .create_application_command(|command| {
             command.name("shutdown").description("Shut down the bot")
-        })
-        .create_application_command(|command| {
-            command.name("numpad").description("brings up a numpad")
-        })
-        .create_application_command(|command| {
-            command.name("play").description("Play the game!")
-        })
+        });
+    minicact::commands::create_commands(commands)
 }
 // Any custom slash commands must be added both to create_commands ^^^ and to handle_command!!
 pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction) -> Result<(), SerenityError> {
@@ -52,13 +47,12 @@ pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction)
         "help" => help_command(ctx, command).await,
         "ping" => ping_command(ctx, command).await,
         "shutdown" => shutdown_command(ctx, command).await,
-        "numpad" => numpad_command(ctx, command).await,
-        "play" => play_command(ctx, command).await,
+        s if s.starts_with("minicact") => minicact::commands::handle_command(ctx, command).await,
         _ => nyi_command(ctx, command).await
     }
 }
 
-async fn nyi_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> {
+pub async fn nyi_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> {
     send_interaction_response_message(&ctx, &command, "This command hasn't been implemented. Try /help", true).await
 }
 
@@ -116,41 +110,5 @@ async fn shutdown_command(ctx: Context, command: ApplicationCommandInteraction) 
     println!("Passed shutdown message");
     // I'm pretty sure this is unnecessary but it makes me happier than not doing it
     ctx.shard.shutdown_clean();
-    Ok(())
-}
-
-async fn numpad_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> {
-    command.create_interaction_response(&ctx.http, |response| {
-        response.kind(InteractionResponseType::ChannelMessageWithSource)
-            .interaction_response_data(|message| {
-                message.content("numpad :)")
-                .components(|components| {
-                    make_numpad_rows(components, &Game::new());
-                    make_reset_bar(components, &Game::new())
-                })
-            })
-        }).await
-}
-
-async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> { 
-    let mut active_games = ACTIVE_GAMES.lock().await;
-    if active_games.contains_key(&command.user.id) {
-        return send_interaction_response_message(&ctx, &command, "You already have a game started!", true).await
-    }
-    let game = Game::new();
-    command.create_interaction_response(&ctx.http, |response| {
-        response.kind(InteractionResponseType::ChannelMessageWithSource)
-            .interaction_response_data(|message| {
-                message.content("hewwo :3")
-                    .ephemeral(true)
-                    .components(|components| {
-                        make_game_rows(components, &game, 255);
-                        make_reset_bar(components, &game)
-                    })
-            })
-    }).await?;
-    // Rust is a beautiful language...
-    // I have to make sure that the message returns successfully before I can put the game into active_games.
-    active_games.insert(command.user.id, game);
     Ok(())
 }

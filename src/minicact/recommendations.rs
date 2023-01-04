@@ -1,4 +1,4 @@
-use crate::game::*;
+use crate::minicact::game::*;
 
 pub fn recommend_position(game: &Game) -> (usize, String) {
     (1, "a".to_string())

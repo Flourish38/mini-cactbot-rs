@@ -2,7 +2,7 @@ pub mod payout;
 
 use std::collections::HashMap;
 
-use crate::game::Action::*;
+use crate::minicact::game::Action::*;
 
 use payout::*;
 use payout::Payout::*;
