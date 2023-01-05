@@ -60,4 +60,32 @@ end
 # so, I need to cover there being 10 options for results.
 # Probably going to just replace the "reset" button in cases where there are 10 results.
 
+function simplify(board::MMatrix{3, 3})
+    b = board
+    sequence = Function[]
+    if (m = maximum(b[SA[2, 4, 6, 8]])) != 0
+        while b[2] != m
+            b = rotate(b)
+            pushfirst!(sequence, unrotate)
+        end
+        if b[6] > b[4] || (b[4] == 0 && b[3] > b[1]) || (b[1] == 0 && b[7] > b[9])
+            b = reflect(b)
+            pushfirst!(sequence, unreflect)
+        end
+    elseif (m = maximum(b[SA[1, 3, 7, 9]])) != 0
+        while b[1] != m
+            b = rotate(b)
+            pushfirst!(sequence, unrotate)
+        end
+        if b[7] > b[3] || (b[3] == 0 && b[4] > b[2]) || (b[2] == 0 && b[8] > b[6])
+            b = rotate(reflect(b))
+            pushfirst!(sequence, unreflect)
+            pushfirst!(sequence, unrotate)
+        end
+    end
+    return b, sequence
+end
+
 nothing
+
+return [j == n ? T(cld(n*i, f)) : (one(T):n)[one(T):n .= T(cld(n*i, f))][perms[mod1(i, l), j]] for i in one(T):f, j in one(T):n]

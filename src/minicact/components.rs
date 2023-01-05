@@ -1,8 +1,8 @@
 use crate::generate_components::make_button;
-use crate::minicact::game::*;
-use crate::minicact::game::Action::*;
-use crate::minicact::generate_components::*;
-use crate::minicact::recommendations::*;
+use super::game::*;
+use super::game::Action::*;
+use super::generate_components::*;
+use super::recommendations::*;
 
 use lazy_static::lazy_static;
 use serenity::model::prelude::component::ButtonStyle;

@@ -1,8 +1,8 @@
 use crate::generate_components::make_button;
 
-use crate::minicact::game::*;
-use crate::minicact::game::Action::*;
-use crate::minicact::game::payout::*;
+use super::game::*;
+use super::game::Action::*;
+use super::game::payout::*;
 
 use serenity::builder::CreateComponents;
 use serenity::model::prelude::component::ButtonStyle;

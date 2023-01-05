@@ -1,8 +1,9 @@
 pub mod payout;
+mod board;
 
 use std::collections::HashMap;
 
-use crate::minicact::game::Action::*;
+use Action::*;
 
 use payout::*;
 use payout::Payout::*;
@@ -13,6 +14,8 @@ use serenity::prelude::*;
 use lazy_static::lazy_static;
 
 lazy_static! { pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex::new(HashMap::new()); }
+
+lazy_static! { static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, usize>> = Mutex::new(HashMap::new()); }
 
 pub struct Game {
     index: u8,

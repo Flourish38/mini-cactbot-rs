@@ -1,6 +1,6 @@
 use crate::commands::{nyi_command, send_interaction_response_message};
-use crate::minicact::game::*;
-use crate::minicact::generate_components::*;
+use super::game::*;
+use super::generate_components::*;
 
 use serenity::builder::CreateApplicationCommands;
 use serenity::model::application::interaction::InteractionResponseType;
