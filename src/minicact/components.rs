@@ -41,7 +41,11 @@ async fn disabled_component(ctx: Context, component: MessageComponentInteraction
 async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game) -> Result<(), SerenityError> {
     let action = game.next_action();
     let (recommendation, content) = if let ChoosePosition(_) = action {
-        recommend_position(&game)
+        match game.last_action() {
+            EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()),
+            _ => recommend_position(&game)
+        }
+        
     } else if let EnterPayout(_) = action {
         recommend_line(game)
     } else {

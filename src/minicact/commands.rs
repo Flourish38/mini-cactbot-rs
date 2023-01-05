@@ -32,7 +32,7 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
     command.create_interaction_response(&ctx.http, |response| {
         response.kind(InteractionResponseType::ChannelMessageWithSource)
             .interaction_response_data(|message| {
-                message.content("hewwo :3")
+                message.content("Enter the already revealed tile:")
                     .ephemeral(true)
                     .components(|components| {
                         make_game_rows(components, &game, 255);

@@ -1,5 +1,6 @@
 pub mod payout;
 mod board;
+pub mod computations;
 
 use std::collections::HashMap;
 
@@ -7,15 +8,17 @@ use Action::*;
 
 use payout::*;
 use payout::Payout::*;
+use board::*;
 
 use serenity::model::id::UserId;
 use serenity::prelude::*;
 
 use lazy_static::lazy_static;
+use smallset::SmallSet;
 
 lazy_static! { pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex::new(HashMap::new()); }
 
-lazy_static! { static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, usize>> = Mutex::new(HashMap::new()); }
+lazy_static! { static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, (usize, [f64; 9])>> = Mutex::new(HashMap::new()); }
 
 pub struct Game {
     index: u8,
@@ -121,6 +124,18 @@ impl Game{
         while let Done | ChoosePosition(_) | RevealNumber(_) = self.last_action() {
             self.undo();
         }
+    }
+
+    pub fn as_board(&self) -> Board {
+        let mut state: [u8; 9] = [255, 255, 255, 255, 255, 255, 255, 255, 255];
+        let nums = self.used_numbers();
+        let pos = self.used_positions();
+        for i in 0..pos.len() {
+            state[pos[i] as usize] = nums[i];
+        }
+        let unused_nums: SmallSet<[u8; 9]> = (0..9).into_iter().filter(|&x| !self.used_numbers().contains(&x)).collect();
+        let n_unused = unused_nums.len();
+        Board { state: state, unused_nums: unused_nums, n_unused: n_unused }
     }
 }
 

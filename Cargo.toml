@@ -10,4 +10,5 @@ config = "0.13.2"
 lazy_static = "1.4.0"
 regex = "1.6.0"
 serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
+smallset = "0.1.1"
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
