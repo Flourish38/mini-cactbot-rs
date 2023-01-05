@@ -21,6 +21,7 @@ fn min_4(x1: u8, x2: u8, x3: u8, x4: u8) -> u8 {
 impl Board {
     // processes the board so it will always be in the same orientation.
     // This reduces the number of precomputed boards by a factor of something >5.
+    // Also returns the inverse operation needed to reverse the transformation.
     fn simplify(&self) -> (Board, &[usize; 9]) {
         let state = &self.state;
         // hell
@@ -54,7 +55,11 @@ impl Board {
         for i in 0..9 {
             output[i] = state[operation[i]];
         }
-        (Board { state: output }, operation)
+        (Board { state: output }, match operation {
+            &ROTATE_LEFT => &ROTATE_RIGHT,  // these are the only 2 operations that aren't their own inverse. who knew
+            &ROTATE_RIGHT => &ROTATE_LEFT,
+            o => o
+        })
     }
 
     // compresses the board state into a u32. The format is 9 bits of a mask for each position, then 7 unused bits, 
