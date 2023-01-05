@@ -1,8 +1,11 @@
 use super::game::*;
-use super::game::computations::compute_best_line;
+use super::game::computations::*;
 
-pub fn recommend_position(game: &Game) -> (usize, String) {
-    (1, "a".to_string())
+pub async fn recommend_position(game: &Game) -> (usize, String) {
+    let mut as_board = game.as_board();
+    let spots = compute_best_uncover(&mut as_board).await;
+    let max = spots.iter().fold(-1.0, |max, &val| if val > max { val } else { max });
+    (spots.iter().position(|&x| x == max).unwrap(), format!("Expected Value: {:.2} MGP", max))
 }
 
 pub fn recommend_line(game: &Game) -> (usize, String) {

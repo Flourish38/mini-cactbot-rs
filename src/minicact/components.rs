@@ -43,7 +43,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
     let (recommendation, content) = if let ChoosePosition(_) = action {
         match game.last_action() {
             EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()),
-            _ => recommend_position(&game)
+            _ => recommend_position(&game).await
         }
         
     } else if let EnterPayout(_) = action {
@@ -114,7 +114,7 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout of {} MGP is {} percentile.", total, "123"))
+                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP.", total))
                     .components(|components| {
                         components.create_action_row(|action_row| {
                             make_button(action_row, "minicact_announce_results", ButtonStyle::Primary, Some("📢"), Some(" Announce your results!"))
@@ -130,16 +130,16 @@ lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([0-9.]+)\s").unw
 async fn announce_results_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut captures = MINICACT_REGEX.captures_iter(component.message.content.as_str());
     let total = captures.next().unwrap().get(1).unwrap().as_str();
-    let percentile = captures.next().unwrap().get(1).unwrap().as_str();
+    // let percentile = captures.next().unwrap().get(1).unwrap().as_str();  // currently not in use
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout of {} MGP is {} percentile.", total, percentile))
+                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP.", total))
                     .components(|components| { components })  
             })
     }).await?;
     component.create_followup_message(&ctx.http, |message| {
-        message.content(format!("{} earned {} MGP from Mini Cactpot today, which is {} percentile!", component.user.mention(), total, percentile))
+        message.content(format!("{} earned {} MGP from Mini Cactpot today!", component.user.mention(), total))
     }).await?;
     Ok(())
 }

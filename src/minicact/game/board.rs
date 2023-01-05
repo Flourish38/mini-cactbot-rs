@@ -23,7 +23,7 @@ impl Board {
     // processes the board so it will always be in the same orientation.
     // This reduces the number of precomputed boards by a factor of something >5.
     // Also returns the inverse operation needed to reverse the transformation.
-    fn simplify(&self) -> (Board, &[usize; 9]) {
+    pub fn simplify(&self) -> (Board, &[usize; 9]) {
         let state = &self.state;
         // hell
         let operation = {
@@ -72,7 +72,7 @@ impl Board {
     // Note that those last TWO (out of three!) groups of 4 zeros do not correspond to an actual number.
     // While I am documenting the format, in general you should never decompress these. Think of it more as an unscrambled hash function.
     // it is HIGHLY recommended you do not call this on unsimplified boards.
-    fn compress(&self) -> u32 {
+    pub fn compress(&self) -> u32 {
         let mut out: u32 = 0;
         let mut num:u8 = 0;
         for pos in 0..9 {
@@ -83,56 +83,5 @@ impl Board {
             }
         }
         out
-    }
-
-    pub fn simplify_compress(&self) -> (u32, &[usize; 9]) {
-        let state = &self.state;
-        // hell
-        let operation = {
-            let corner_min = min_4(state[0], state[2], state[6], state[8]);
-            if corner_min != 255 {
-                match corner_min {
-                    n if n == state[0] => if state[6] < state[2] || (state[2] == 255 && (state[3] < state[1]) || (state[1] == 255 && state[7] < state[5])) {&FLIP_ROTATE_TL} else {&DO_NOTHING},
-                    n if n == state[2] => if state[0] < state[8] || (state[8] == 255 && (state[1] < state[5]) || (state[5] == 255 && state[3] < state[7])) {&FLIP_HORIZONTAL} else {&ROTATE_LEFT},
-                    n if n == state[6] => if state[8] < state[0] || (state[0] == 255 && (state[7] < state[3]) || (state[3] == 255 && state[5] < state[1])) {&FLIP_VERTICAL} else {&ROTATE_RIGHT},
-                    n if n == state[8] => if state[2] < state[6] || (state[6] == 255 && (state[5] < state[7]) || (state[7] == 255 && state[1] < state[3])) {&FLIP_ROTATE_TR} else {&ROTATE_180},
-                    _ => panic!("Impossible state reached")
-                }
-            } else {
-                let side_min = min_4(state[1], state[3], state[5], state[7]);
-                if side_min != 255 {
-                    match side_min {
-                        n if n == state[1] => if state[5] < state[3] {&FLIP_HORIZONTAL} else {&DO_NOTHING},
-                        n if n == state[3] => if state[1] < state[7] {&FLIP_ROTATE_TL} else {&ROTATE_RIGHT},
-                        n if n == state[5] => if state[7] < state[1] {&FLIP_ROTATE_TR} else {&ROTATE_LEFT},
-                        n if n == state[7] => if state[3] < state[5] {&FLIP_VERTICAL} else {&ROTATE_180},
-                        _ => panic!("Impossible state reached")
-                    }
-                } else {  // either just middle or nothing
-                    &DO_NOTHING
-                }
-            } 
-        };
-        // but hey, this part is nice and simple :P
-        let mut simple_state = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-        for i in 0..9 {
-            simple_state[i] = state[operation[i]];
-        }
-
-        // compress part
-        let mut out: u32 = 0;
-        let mut num:u8 = 0;
-        for pos in 0..9 {
-            if simple_state[pos] != 255 {
-                out |= 1 << (31 - pos);
-                out |= (self.state[pos] as u32) << (12 - 4*num);
-                num += 1;
-            }
-        }
-        (out, match operation {
-            &ROTATE_LEFT => &ROTATE_RIGHT,  // these are the only 2 operations that aren't their own inverse. who knew
-            &ROTATE_RIGHT => &ROTATE_LEFT,
-            o => o
-        })
     }
 }

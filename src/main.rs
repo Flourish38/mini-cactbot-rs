@@ -6,9 +6,11 @@ mod commands;
 mod components;
 mod generate_components;
 mod minicact;
+mod startup;
 
 use commands::*;
 use components::*;
+use startup::startup;
 
 use std::env;
 
@@ -118,6 +120,8 @@ async fn main() {
             }
         }
     });
+
+    startup().await;
 
     // Start the client.
     match client.start().await {
