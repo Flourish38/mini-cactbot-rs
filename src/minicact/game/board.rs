@@ -2,8 +2,7 @@ use smallset::SmallSet;
 
 pub struct Board {
     pub state: [u8; 9],
-    pub unused_nums: SmallSet<[u8; 9]>,
-    pub n_unused: usize
+    pub unused_nums: SmallSet<[u8; 9]>
 }
 
 // all 8 board state transformations that preserve all relevant properties.
@@ -57,7 +56,7 @@ impl Board {
         for i in 0..9 {
             output[i] = state[operation[i]];
         }
-        (Board { state: output, unused_nums: self.unused_nums.clone(), n_unused: self.n_unused }, match operation {
+        (Board { state: output, unused_nums: self.unused_nums.clone() }, match operation {
             &ROTATE_LEFT => &ROTATE_RIGHT,  // these are the only 2 operations that aren't their own inverse. who knew
             &ROTATE_RIGHT => &ROTATE_LEFT,
             o => o

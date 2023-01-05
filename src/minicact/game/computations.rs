@@ -26,18 +26,16 @@ pub fn compute_best_line(board: &mut Board) -> [f64; 8] {
             let mut output = [0., 0., 0., 0., 0., 0., 0., 0.];
             for x in unused_nums.iter() {
                 board.state[i] = *x;
-                board.n_unused -= 1;
                 board.unused_nums.remove(x);
                 let deeper_output = compute_best_line(board);
                 for j in 0..8 {
                     output[j] += deeper_output[j];
                 }
-                board.n_unused += 1;
                 board.unused_nums.insert(*x);
             }
             board.state[i] = 255;
             for j in 0..8 {
-                output[j] /= board.n_unused as f64;
+                output[j] /= unused_nums.len() as f64;
             }
             output
         }

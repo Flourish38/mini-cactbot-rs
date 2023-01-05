@@ -134,8 +134,7 @@ impl Game{
             state[pos[i] as usize] = nums[i];
         }
         let unused_nums: SmallSet<[u8; 9]> = (0..9).into_iter().filter(|&x| !self.used_numbers().contains(&x)).collect();
-        let n_unused = unused_nums.len();
-        Board { state: state, unused_nums: unused_nums, n_unused: n_unused }
+        Board { state: state, unused_nums: unused_nums}
     }
 }
 
