@@ -1,4 +1,5 @@
-use crate::commands::{nyi_command, send_interaction_response_message};
+use crate::commands::nyi_command;
+use crate::generate_components::make_button;
 use super::game::*;
 use super::generate_components::*;
 
@@ -6,6 +7,7 @@ use serenity::builder::CreateApplicationCommands;
 use serenity::model::application::interaction::InteractionResponseType;
 use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 use serenity::prelude::*;
+use serenity::model::prelude::component::ButtonStyle;
 
 pub async fn handle_command(ctx: Context, command:ApplicationCommandInteraction) -> Result<(), SerenityError> {
     // Add any custom commands here
@@ -26,7 +28,19 @@ pub fn create_commands(commands: &mut CreateApplicationCommands) -> &mut CreateA
 async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> { 
     let mut active_games = ACTIVE_GAMES.lock().await;
     if active_games.contains_key(&command.user.id) {
-        return send_interaction_response_message(&ctx, &command, "You already have a game started!", true).await
+        return command.create_interaction_response(&ctx.http, |response| {
+            response.kind(InteractionResponseType::ChannelMessageWithSource)
+                .interaction_response_data(|message| {
+                    message.content(format!("{} you already have a game started.\nWould you like to:> ↩ Restore your previous game\n> 🔄 Discard and start from scratch", command.user.mention()))
+                        .ephemeral(true)
+                        .components(|components| {
+                            components.create_action_row(|action_row| {
+                                make_button(action_row, "minicact_restore", ButtonStyle::Primary, Some("↩"), Some(" Restore"));
+                                make_button(action_row, "minicact_full_reset", ButtonStyle::Primary, Some("🔄"), Some(" Discard"))
+                            })
+                        })
+                })
+        }).await
     }
     let game = Game::new();
     command.create_interaction_response(&ctx.http, |response| {

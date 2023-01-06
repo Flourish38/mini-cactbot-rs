@@ -10,13 +10,14 @@ mod startup;
 
 use commands::*;
 use components::*;
+use serenity::model::user::OnlineStatus;
 use startup::startup;
 
 use std::env;
 
 use tokio::sync::mpsc;
 
-use serenity::async_trait;
+use serenity::{async_trait, model::prelude::Activity};
 use serenity::model::application::command::Command;
 use serenity::model::application::interaction::Interaction;
 use serenity::model::gateway::Ready;
@@ -61,7 +62,7 @@ impl EventHandler for Handler {
 
     async fn ready(&self, ctx: Context, ready: Ready) {
         println!("{:?}\t {} is connected!", Local::now(), ready.user.name);
-        
+        ctx.set_presence(Some(Activity::playing("using /minicact_play")), OnlineStatus::Online).await;  // pretty awesome that this doesn't return errors.
         Command::set_global_application_commands(&ctx.http, create_commands)
         .await.expect("Failed to set application commands");
     }

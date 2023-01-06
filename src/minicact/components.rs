@@ -23,6 +23,8 @@ pub async fn handle_component(ctx: Context, component: MessageComponentInteracti
         "minicact_undo" => undo_component(ctx, component).await,
         "minicact_last_input" => last_input_component(ctx, component).await,
         "minicact_announce_results" => announce_results_component(ctx, component).await,
+        "minicact_restore" => restore_component(ctx, component).await,
+        "minicact_full_reset" => full_reset_component(ctx, component).await,
         _ => minicact_component(ctx, component).await
     }
 }
@@ -78,7 +80,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
 
 async fn minicact_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
-    let game: &mut Game = active_games.get_mut(&component.user.id).expect("Game not in active game list!!");
+    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let mut num = 0;
     let action = game.next_action();
     if let RevealNumber(_) | ChoosePosition(_) = action {
@@ -97,21 +99,21 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
 
 async fn reset_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
-    let game: &mut Game = active_games.get_mut(&component.user.id).expect("Game not in active list!!");
+    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     game.reset();
     create_minicact_response(&component, &ctx, game).await
 }
 
 async fn undo_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
-    let game: &mut Game = active_games.get_mut(&component.user.id).expect("Game not in active list!!");
+    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     game.undo();
     create_minicact_response(&component, &ctx, game).await
 }
 
 async fn last_input_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
-    let game: &mut Game = active_games.get_mut(&component.user.id).expect("Game not in active list!!");
+    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let total = game.total_payout();
     active_games.remove(&component.user.id);
     component.create_interaction_response(&ctx.http, |response|{
@@ -145,4 +147,51 @@ async fn announce_results_component(ctx: Context, component: MessageComponentInt
         message.content(format!("{} earned {} MGP from Mini Cactpot today!", component.user.mention(), total))
     }).await?;
     Ok(())
+}
+
+async fn restore_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    let active_games = ACTIVE_GAMES.lock().await;
+    let game= handle_game(active_games.get(&component.user.id), &component, &ctx).await?;
+    create_minicact_response(&component, &ctx, game).await
+}
+
+async fn full_reset_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    let mut active_games = ACTIVE_GAMES.lock().await;
+    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
+    while !matches!(game.last_action(), Start) {
+        game.reset();
+    }
+    create_minicact_response(&component, &ctx, game).await
+}
+
+async fn handle_game_mut<'a>(maybe_game: Option<&'a mut Game>, component: &MessageComponentInteraction, ctx: &Context) -> Result<&'a mut Game, SerenityError> {
+    match maybe_game {
+        Some(game) => Ok(game),
+        None => {
+            removed_game_response(component, ctx).await?;
+            println!("{:?}\t Failed to get game for user {} with Id {} while attempting {}. Probably fine.", Local::now(), component.user.name, component.user.id, component.data.custom_id);
+            Err(SerenityError::Other("Failed to get game for user. Probably fine."))
+        }
+    }
+}
+
+async fn handle_game<'a>(maybe_game: Option<&'a Game>, component: &MessageComponentInteraction, ctx: &Context) -> Result<&'a Game, SerenityError> {
+    match maybe_game {
+        Some(game) => Ok(game),
+        None => {
+            removed_game_response(component, ctx).await?;
+            println!("{:?}\t Failed to get game for user {} with Id {} while attempting {}. Probably fine.", Local::now(), component.user.name, component.user.id, component.data.custom_id);
+            Err(SerenityError::Other("Failed to get game for user. Probably fine."))
+        }
+    }
+}
+
+async fn removed_game_response(component: &MessageComponentInteraction, ctx: &Context) -> Result<(), SerenityError> {
+    component.create_interaction_response(&ctx.http, |response|{
+        response.kind(InteractionResponseType::UpdateMessage)
+            .interaction_response_data(|message| {
+                message.content(format!("{} Your game is no longer being tracked, meaning that either you completed it elsewhere or the bot restarted.\nFeel free to dismiss this message.", component.user.mention()))
+                    .components(|components| { components })  
+            })
+    }).await
 }

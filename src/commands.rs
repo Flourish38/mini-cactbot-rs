@@ -64,7 +64,7 @@ async fn help_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         response.kind(InteractionResponseType::ChannelMessageWithSource)
             .interaction_response_data(|data| {
                 data.ephemeral(true)
-                    .content("Currently available commands: `/ping`, `/shutdown`, `/help`.")
+                    .content("Currently available commands: `/ping`, `/shutdown`, `/help`, `/minicact_play`.")
             })
     }).await
     // for some reason you can't delete ephemeral interaction responses so I guess I'll just suffer
