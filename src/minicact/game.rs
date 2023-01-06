@@ -27,6 +27,7 @@ pub struct Game {
     payout_history: [Payout; 3],
 }
 
+#[derive(Debug)]
 pub enum Action {
     Start,
     ChoosePosition(u8),

@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::minicact::game::payout::Payout::*;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Payout {
     NoPayout,
     _36,

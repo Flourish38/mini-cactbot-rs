@@ -2,6 +2,8 @@ use crate::ADMIN_USERS;
 use crate::generate_components::*;
 use crate::minicact;
 
+use chrono::Local;
+
 use std::time::Instant;
 
 use serenity::builder::CreateApplicationCommands;
@@ -97,7 +99,7 @@ async fn shutdown_command(ctx: Context, command: ApplicationCommandInteraction) 
         send_interaction_response_message(&ctx, &command, "You do not have permission.", true).await?;
         return Ok(())
     }
-    println!("Shutdown from user {} with Id {}", command.user.name, command.user.id);
+    println!("{:?}\t Shutdown from user {} with Id {}", Local::now(), command.user.name, command.user.id);
     // no ? here, we don't want to return early if this fails
     _ = send_interaction_response_message(&ctx, &command, "Shutting down...", true).await;
     // loosely based on https://stackoverflow.com/a/65456463
@@ -107,7 +109,7 @@ async fn shutdown_command(ctx: Context, command: ApplicationCommandInteraction) 
     let sender = lock.as_ref().expect("Shutdown command called before shutdown channel initialized??");
     // If this errors, the receiver could not receive the message anyways, so we want to panic
     sender.send(true).await.expect("Shutdown message send error");
-    println!("Passed shutdown message");
+    println!("{:?}\t Passed shutdown message", Local::now());
     // I'm pretty sure this is unnecessary but it makes me happier than not doing it
     ctx.shard.shutdown_clean();
     Ok(())

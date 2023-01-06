@@ -25,6 +25,8 @@ use serenity::prelude::*;
 
 use config::{Config, File, ConfigError};
 
+use chrono::Local;
+
 use lazy_static::lazy_static;
 
 // Technically this initial vec is never used but it makes it so you don't need to use an expect() whenever you use the variable.
@@ -44,21 +46,21 @@ impl EventHandler for Handler {
             Interaction::ApplicationCommand(command) => {
                 // Commands are implemented in src/commands.rs
                 if let Err(why) = handle_command(ctx, command).await {
-                    println!("Cannot respond to slash command: {}", why);
+                    println!("{:?}\t Cannot respond to slash command: {}", Local::now(), why);
                 };
             },
             Interaction::MessageComponent(component) => {
                 // Components are implemented in src/components.rs
                 if let Err(why) = handle_component(ctx, component).await {
-                    println!("Cannot respond to message component: {}", why);
+                    println!("{:?}\t Cannot respond to message component: {}", Local::now(), why);
                 }
             },
-            _ => println!("Unimplemented interaction: {}", interaction.kind().num())
+            _ => println!("{:?}\t Unimplemented interaction: {}", Local::now(), interaction.kind().num())
         }
     }
 
     async fn ready(&self, ctx: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        println!("{:?}\t {} is connected!", Local::now(), ready.user.name);
         
         Command::set_global_application_commands(&ctx.http, create_commands)
         .await.expect("Failed to set application commands");
@@ -89,7 +91,7 @@ async fn main() {
                                     }).collect::<Vec<UserId>>();
 
     if admins.is_empty() {
-        println!("WARNING: No admin users specified! By default, any user will be able to shut down your bot.");
+        println!("{:?}\t WARNING: No admin users specified! By default, any user will be able to shut down your bot.", Local::now());
     }
 
     *ADMIN_USERS.lock().await = admins;
@@ -115,7 +117,7 @@ async fn main() {
             let b = receiver.recv().await.expect("Shutdown message pass error");
             if b {
                 shard_manager.lock().await.shutdown_all().await;
-                println!("Shutdown shard manager");
+                println!("{:?}\t Shutdown shard manager", Local::now());
                 break;
             }
         }
@@ -125,8 +127,8 @@ async fn main() {
 
     // Start the client.
     match client.start().await {
-        Err(why) => println!("Client error: {}", why),
-        Ok(_) => println!("Client shutdown cleanly")
+        Err(why) => println!("{:?}\t Client error: {}", Local::now(), why),
+        Ok(_) => println!("{:?}\t Client shutdown cleanly", Local::now())
     }
     
 }

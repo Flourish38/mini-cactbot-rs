@@ -3,7 +3,7 @@ use super::payout::PAYOUTS;
 use super::PRECOMPUTED_BOARDS;
 use super::super::generate_components::POSITION_LINE_TABLE;
 
-use std::time::Instant;
+use chrono::Local;
 
 use async_recursion::async_recursion;
 
@@ -47,7 +47,7 @@ pub async fn compute_best_uncover(original_board: &mut Board) -> [f64; 9] {
     let mut precomputed_boards_2 = PRECOMPUTED_BOARDS.lock().await;
     precomputed_boards_2.insert(compressed, result.clone());
     if n == 1 {
-        println!("{:?}\t {}", Instant::now(), precomputed_boards_2.len());
+        println!("{:?}\t {}", Local::now(), precomputed_boards_2.len());
     }
     output
 }

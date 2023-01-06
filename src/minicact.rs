@@ -10,15 +10,17 @@ use game::PRECOMPUTED_BOARDS;
 
 use std::time::Instant;
 
+use chrono::Local;
+
 pub async fn startup() {
     let mut board = Board { 
         state: [255, 255, 255, 255, 255, 255, 255, 255, 255],
         unused_nums: (0..9).into_iter().collect()
     };
-    println!("{:?}\t Computing all possible boards...", Instant::now());
+    println!("{:?}\t Computing all possible boards...", Local::now());
     let now = Instant::now();
     compute_best_uncover(&mut board).await;
     let elapsed = now.elapsed();
     let precomputed_boards = PRECOMPUTED_BOARDS.lock().await;
-    println!("{:?}\t Computed {} board states in {:.2?}.", Instant::now(), precomputed_boards.len(), elapsed);
+    println!("{:?}\t Computed {} board states in {:.2?}.", Local::now(), precomputed_boards.len(), elapsed);
 }

@@ -4,13 +4,16 @@ use super::game::Action::*;
 use super::generate_components::*;
 use super::recommendations::*;
 
-use lazy_static::lazy_static;
 use serenity::model::prelude::component::ButtonStyle;
 use serenity::model::prelude::interaction::InteractionResponseType;
 use serenity::model::prelude::interaction::message_component::MessageComponentInteraction;
 use serenity::prelude::*;
 
+use lazy_static::lazy_static;
+
 use regex::Regex;
+
+use chrono::Local;
 
 pub async fn handle_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     // Add any custom components here
@@ -54,7 +57,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
         if let Some(i) = opt_i {
             s.truncate(i)
         };
-        (0, s)
+        (0, s)  // the zero does nothing, because we have guaranteed that we are in the RevealNumber case.
     };
     component.create_interaction_response(&ctx.http, |response| {
         response.kind(InteractionResponseType::UpdateMessage)
@@ -83,10 +86,10 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
     }
     
     match action {
-        RevealNumber(_) => game.set_number(num),
-        ChoosePosition(_) => game.set_position(num),
-        EnterPayout(_) => game.set_payout(component.data.values.first().unwrap().into()),
-        _ => ()
+        RevealNumber(_) if component.data.custom_id.contains("numpad") => game.set_number(num),
+        ChoosePosition(_) if component.data.custom_id.contains("game") => game.set_position(num),
+        EnterPayout(_) if component.data.custom_id.contains("payout") => game.set_payout(component.data.values.first().unwrap().into()),
+        _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
     };
 
     create_minicact_response(&component, &ctx, game).await
