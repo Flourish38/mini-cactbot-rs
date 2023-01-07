@@ -31,7 +31,7 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         return command.create_interaction_response(&ctx.http, |response| {
             response.kind(InteractionResponseType::ChannelMessageWithSource)
                 .interaction_response_data(|message| {
-                    message.content(format!("{} you already have a game started.\nWould you like to:> ↩ Restore your previous game\n> 🔄 Discard and start from scratch", command.user.mention()))
+                    message.content(format!("{} you already have a game started.\nWould you like to:\n> ↩ Restore your previous game\n> 🔄 Discard it and start from scratch", command.user.mention()))
                         .ephemeral(true)
                         .components(|components| {
                             components.create_action_row(|action_row| {

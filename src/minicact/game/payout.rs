@@ -25,7 +25,7 @@ pub enum Payout {
 
 pub const PAYOUT_VALUES: [u16; 17] = [0, 36, 54, 72, 80, 108, 119, 144, 180, 252, 306, 360, 720, 1080, 1800, 3600, 10000];
 
-pub const PAYOUTS: [f64; 22] = [0., 0., 0., 10000., 36., 720., 360., 80., 252., 108., 72., 54., 180., 72., 180., 119., 36., 306., 1080., 144., 1800., 3600.];
+pub const PAYOUTS: [usize; 22] = [22, 22, 22, 15, 0, 11, 10, 3, 8, 4, 2, 1, 7, 2, 7, 5, 0, 9, 12, 6, 13, 14];
 
 // TIL that this gets you ToString for free
 impl Display for Payout {

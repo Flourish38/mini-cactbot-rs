@@ -3,6 +3,7 @@ use super::game::*;
 use super::game::Action::*;
 use super::generate_components::*;
 use super::recommendations::*;
+use super::DAILY_PAYOUT_DIST;
 
 use serenity::model::prelude::component::ButtonStyle;
 use serenity::model::prelude::interaction::InteractionResponseType;
@@ -115,11 +116,14 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let total = game.total_payout();
+    let daily_payout_dist = DAILY_PAYOUT_DIST.lock().await;
+    let percentile = daily_payout_dist.get(&total).unwrap().clone();
+    drop(daily_payout_dist);
     active_games.remove(&component.user.id);
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP.", total))
+                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP, which is {:.2} percentile.", total, percentile))
                     .components(|components| {
                         components.create_action_row(|action_row| {
                             make_button(action_row, "minicact_announce_results", ButtonStyle::Primary, Some("📢"), Some(" Announce your results!"))
@@ -130,21 +134,20 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
 }
 
 // Don't want to recompile the regex every time, so I made it a static
-lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([0-9.]+)\s").unwrap(); }
+lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([\d.]+)\s").unwrap(); }
 
 async fn announce_results_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut captures = MINICACT_REGEX.captures_iter(component.message.content.as_str());
     let total = captures.next().unwrap().get(1).unwrap().as_str();
-    // let percentile = captures.next().unwrap().get(1).unwrap().as_str();  // currently not in use
+    let percentile = captures.next().unwrap().get(1).unwrap().as_str();  // currently not in use
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP.", total))
-                    .components(|components| { components })  
+                message.components(|components| { components })  
             })
     }).await?;
     component.create_followup_message(&ctx.http, |message| {
-        message.content(format!("{} earned {} MGP from Mini Cactpot today!", component.user.mention(), total))
+        message.content(format!("{} earned {} MGP from Mini Cactpot today, which is {} percentile!", component.user.mention(), total, percentile))
     }).await?;
     Ok(())
 }

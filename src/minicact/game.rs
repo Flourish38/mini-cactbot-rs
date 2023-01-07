@@ -18,7 +18,7 @@ use smallset::SmallSet;
 
 lazy_static! { pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex::new(HashMap::new()); }
 
-lazy_static! { pub static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, [f64; 9]>> = Mutex::new(HashMap::new()); }
+lazy_static! { pub static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, (usize, [u32; 16])>> = Mutex::new(HashMap::new()); }
 
 pub struct Game {
     index: u8,
