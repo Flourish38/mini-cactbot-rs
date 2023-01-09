@@ -34,7 +34,10 @@ impl Board {
                     n if n == state[2] => if state[0] < state[8] || (state[8] == 255 && (state[1] < state[5]) || (state[5] == 255 && state[3] < state[7])) {&FLIP_HORIZONTAL} else {&ROTATE_LEFT},
                     n if n == state[6] => if state[8] < state[0] || (state[0] == 255 && (state[7] < state[3]) || (state[3] == 255 && state[5] < state[1])) {&FLIP_VERTICAL} else {&ROTATE_RIGHT},
                     n if n == state[8] => if state[2] < state[6] || (state[6] == 255 && (state[5] < state[7]) || (state[7] == 255 && state[1] < state[3])) {&FLIP_ROTATE_TR} else {&ROTATE_180},
-                    _ => panic!("Impossible state reached")
+                    _ => {
+                        println!("Impossible state reached during board.simplify(): corners case.\n{:?}", state);
+                        return (Board{ state: state.clone(), unused_nums: self.unused_nums.clone() }, &DO_NOTHING)
+                    }
                 }
             } else {
                 let side_min = min_4(state[1], state[3], state[5], state[7]);
@@ -44,9 +47,12 @@ impl Board {
                         n if n == state[3] => if state[1] < state[7] {&FLIP_ROTATE_TL} else {&ROTATE_RIGHT},
                         n if n == state[5] => if state[7] < state[1] {&FLIP_ROTATE_TR} else {&ROTATE_LEFT},
                         n if n == state[7] => if state[3] < state[5] {&FLIP_VERTICAL} else {&ROTATE_180},
-                        _ => panic!("Impossible state reached")
+                        _ => {
+                            println!("Impossible state reached during board.simplify(): corners case.\n{:?}", state);
+                            return (Board{ state: state.clone(), unused_nums: self.unused_nums.clone() }, &DO_NOTHING)
+                        }
                     }
-                } else {  // either just middle or nothing
+                } else {  // either just middle or empty board
                     &DO_NOTHING
                 }
             } 

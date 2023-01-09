@@ -41,7 +41,7 @@ async fn disabled_component(ctx: Context, component: MessageComponentInteraction
             .interaction_response_data(|message| {
                 message.content(content)
             })
-    }).await
+    }).await.into()
 }
 
 async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game) -> Result<(), SerenityError> {
@@ -82,18 +82,26 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
 async fn minicact_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
-    let mut num = 0;
     let action = game.next_action();
-    if let RevealNumber(_) | ChoosePosition(_) = action {
-        num = component.data.custom_id.chars().last().unwrap().to_digit(10).unwrap().try_into().unwrap(); // TODO
-    }
-    
+    // This is not fun but it never panics!
     match action {
-        RevealNumber(_) if component.data.custom_id.contains("numpad") => game.set_number(num),
-        ChoosePosition(_) if component.data.custom_id.contains("game") => game.set_position(num),
-        EnterPayout(_) if component.data.custom_id.contains("payout") => game.set_payout(component.data.values.first().unwrap().into()),
+        RevealNumber(_) | ChoosePosition(_) => {
+            let num = component.data.custom_id.chars().last()
+                .and_then(|x| x.to_digit(10))
+                .ok_or(SerenityError::Other("Failed to convert last digit of custom_id during minicact_component??"))? as u8;
+            match action {
+                RevealNumber(_) if component.data.custom_id.contains("numpad") => game.set_number(num),
+                ChoosePosition(_) if component.data.custom_id.contains("game") => game.set_position(num),
+                _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
+            }
+        },
+        EnterPayout(_) if component.data.custom_id.contains("payout") => {
+            game.set_payout(component.data.values
+                .first().ok_or(SerenityError::Other("Payout component didn't return a value??"))?
+                .into());
+        },
         _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
-    };
+    }
 
     create_minicact_response(&component, &ctx, game).await
 }
@@ -117,7 +125,7 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let total = game.total_payout();
     let daily_payout_dist = DAILY_PAYOUT_DIST.lock().await;
-    let percentile = daily_payout_dist.get(&total).unwrap().clone();
+    let percentile = daily_payout_dist.get(&total).ok_or(SerenityError::Other("Somehow total payout is not in daily_payout_dist??"))?.clone();
     drop(daily_payout_dist);
     active_games.remove(&component.user.id);
     component.create_interaction_response(&ctx.http, |response|{
@@ -134,12 +142,12 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
 }
 
 // Don't want to recompile the regex every time, so I made it a static
-lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([\d.]+)\s").unwrap(); }
+lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([\d.]+)\s").expect("MINICACT_REGEX errored on creation???????"); }
 
 async fn announce_results_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut captures = MINICACT_REGEX.captures_iter(component.message.content.as_str());
-    let total = captures.next().unwrap().get(1).unwrap().as_str();
-    let percentile = captures.next().unwrap().get(1).unwrap().as_str();  // currently not in use
+    let total = captures.next().and_then(|x| x.get(1)).ok_or(SerenityError::Other("Couldn't find total in results message!!"))?.as_str();
+    let percentile = captures.next().and_then(|x| x.get(1)).ok_or(SerenityError::Other("Couldn't find percentile in results message!!"))?.as_str();
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {

@@ -114,8 +114,9 @@ async fn main() {
     // Spawns a task that waits for the shutdown command, then shuts down the bot.
     tokio::spawn(async move {
         loop {
-            // I have left open the possibility of using b=false for something "softer" in case you need it.
+            // If this returns None, then something is wrong so we want to panic
             let b = receiver.recv().await.expect("Shutdown message pass error");
+            // I have left open the possibility of using b=false for something "softer" in case you need it.
             if b {
                 shard_manager.lock().await.shutdown_all().await;
                 println!("{:?}\t Shutdown shard manager", Local::now());
