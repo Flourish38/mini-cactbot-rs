@@ -149,18 +149,6 @@ pub fn compute_best_line_rec(board: &mut Board)  -> [[u32; 16]; 8] {
                 }
                 // sort of fun to think of that all of the numbers that come out of these functions are built from this line, 1 at a time.
                 output[i][PAYOUTS[total as usize]] += 1;
-                // NOTE: it is TECHNICALLY POSSIBLE for this index to be out of bounds!! Recreated by the following:
-                // 1. /minicact_play, then pick any tile
-                // 2. /minicact_play, then pick "restore". This will give you 2 interfaces with full numpads.
-                // 3. press 9 on one of the interfaces, then press a tile in line with that 9.
-                // 4. press 9 on the other interface.
-                // This gives the error:
-                // thread 'tokio-runtime-worker' panicked at 'index out of bounds: the len is 22 but the index is 22', src\minicact\game\computations.rs:151:27
-                // As a workaround, you can simply hit undo or reset.
-
-                // Potential solutions:
-                // 1. prevent Games from accepting data that they have already used (easy, 2 lines of code)
-                // 2. prevent Games from being fed data from boards on a different game.index (better, but requires modifying component custom_ids and some parsing)
             }
             output
         },

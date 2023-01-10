@@ -31,11 +31,13 @@ pub async fn handle_component(ctx: Context, component: MessageComponentInteracti
 }
 
 async fn disabled_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
-    let content = if component.message.content.ends_with("🔄") {  // The user already hit a disabled button last time.
-        component.message.content.clone()
-    } else {
-        format!("{}\n{} That button is currently disabled. If you made a mistake, press `Undo` ↩ / `Reset` 🔄", component.message.content, component.user.mention())
-    };
+    // truncates any errors/warnings that the user might have had
+    let opt_i = component.message.content.find(component.user.mention().to_string().as_str());
+    let mut s = component.message.content.clone();
+    if let Some(i) = opt_i {
+       s.truncate(i)
+    }
+    let content = format!("{}\n{} That button is currently disabled. If you made a mistake, press `Undo` ↩ / `Reset` 🔄", s, component.user.mention());
     component.create_interaction_response(ctx.http, |response| {
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
@@ -44,9 +46,9 @@ async fn disabled_component(ctx: Context, component: MessageComponentInteraction
     }).await
 }
 
-async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game) -> Result<(), SerenityError> {
+async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game, desync: bool) -> Result<(), SerenityError> {
     let action = game.next_action();
-    let (recommendation, content) = if let ChoosePosition(_) = action {
+    let (recommendation, mut content) = if let ChoosePosition(_) = action {
         match game.last_action() {
             EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()), // Can't recommend, haven't seen the first tile yet!
             _ => recommend_position(&game).await
@@ -62,6 +64,9 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
         };
         (0, s)  // the zero does nothing, because we have guaranteed that we are in the RevealNumber case.
     };
+    if desync {
+        content.push_str(format!("\n{} desync detected and fixed. Please double-check that everything is correct.", component.user.mention()).as_str());
+    }
     component.create_interaction_response(&ctx.http, |response| {
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
@@ -70,7 +75,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
                         match action {
                             ChoosePosition(_) => {make_game_rows(components, &game, recommendation);},
                             RevealNumber(_) => {make_numpad_rows(components, &game);},
-                            EnterPayout(_) => {make_game_rows(components, &game, recommendation); make_payout_dropdown(components);},
+                            EnterPayout(_) => {make_game_rows(components, &game, recommendation); make_payout_dropdown(components, &game);},
                             _ => ()  // in the Done case, this means that only the reset_bar will be printed. It handles this specially.
                         }
                         make_reset_bar(components, &game)
@@ -80,11 +85,20 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
 }
 
 async fn minicact_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    // custom_id contains game.index() to catch desyncs
+    let (custom_id_index_index, _) = component.data.custom_id.char_indices().rev().nth(3).ok_or(SerenityError::Other("custom_id less than 4 characters???"))?;
+    // this only works because I am 100% confident that custom_id is an ASCII string
+    let custom_id_index:usize = component.data.custom_id[custom_id_index_index..(custom_id_index_index+2)].parse().map_err(|_| SerenityError::Other("custom_id index failed to parse!!"))?;
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let action = game.next_action();
+    if game.index() != custom_id_index {  // Desync guaranteed.
+        println!("{:?}\t User {} with Id {} desynced from index {} to {}. Resyncing...", Local::now(), component.user.name, component.user.id, custom_id_index, game.index());
+        return create_minicact_response(&component, &ctx, game, true).await
+    }
     // This is not fun but it never panics!
     // It was genuinely a massive pain to do this with no .unwrap().
+    let mut desync = false;
     match action {
         RevealNumber(_) | ChoosePosition(_) => {
             let num = component.data.custom_id.chars().last()
@@ -93,7 +107,10 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
             match action {
                 RevealNumber(_) if component.data.custom_id.contains("numpad") => game.set_number(num),
                 ChoosePosition(_) if component.data.custom_id.contains("game") => game.set_position(num),
-                _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
+                _ => {
+                    println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action);
+                    desync = true;
+                }
             }
         },
         EnterPayout(_) if component.data.custom_id.contains("payout") => {
@@ -101,27 +118,29 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
                 .first().ok_or(SerenityError::Other("Payout component didn't return a value??"))?
                 .into());
         },
-        _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
+        _ => {
+            println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action);
+            desync = true;
+        }
     }
     // conveniently, even if the user "desyncs" somehow, calling create_minicact_response will show them the correct game state.
-    // Unfortunately, this does not catch desyncs by 2 steps, since you will still just be entering a number.
 
     // Now that we have either mutated the board (or not), time to show the user!
-    create_minicact_response(&component, &ctx, game).await
+    create_minicact_response(&component, &ctx, game, desync).await
 }
 
 async fn reset_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     game.reset();
-    create_minicact_response(&component, &ctx, game).await
+    create_minicact_response(&component, &ctx, game, false).await
 }
 
 async fn undo_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     game.undo();
-    create_minicact_response(&component, &ctx, game).await
+    create_minicact_response(&component, &ctx, game, false).await
 }
 
 // note that the only time this component IS NOT disabled (i.e. calls disabled_component instead) is when the user has played ALL 3 games.
@@ -173,7 +192,7 @@ async fn announce_results_component(ctx: Context, component: MessageComponentInt
 async fn restore_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let active_games = ACTIVE_GAMES.lock().await;
     let game= handle_game(active_games.get(&component.user.id), &component, &ctx).await?;
-    create_minicact_response(&component, &ctx, game).await
+    create_minicact_response(&component, &ctx, game, false).await
 }
 
 async fn full_reset_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
@@ -182,7 +201,7 @@ async fn full_reset_component(ctx: Context, component: MessageComponentInteracti
     while !matches!(game.last_action(), Start) {
         game.reset();
     }
-    create_minicact_response(&component, &ctx, game).await
+    create_minicact_response(&component, &ctx, game, false).await
 }
 
 // These are necessary in case the user pushed a component but they did not have a game started.

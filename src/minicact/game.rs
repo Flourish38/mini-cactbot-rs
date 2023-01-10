@@ -48,7 +48,7 @@ impl Game{
     }
 
     // got tired of writing self.index as usize
-    fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         self.index.into()
     }
 
@@ -83,6 +83,7 @@ impl Game{
 
     // note that these do not actually check that the game is in the correct state before setting.
     // Fortunately, the worst case is just overwriting a previous action.
+    // edit: the worst case is actually having multiple of the same number, which can cause panics.
     
     pub fn set_position(&mut self, position: u8) {
         self.position_history[self.index()] = position;

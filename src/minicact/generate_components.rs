@@ -32,9 +32,9 @@ pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -
         components.create_action_row(|action_row| {
             for i in (3*j)..(3*j+3) {
                 if game.used_numbers().contains(&i) {
-                    make_button(action_row, format!("minicact_X_numpad_{}", i), ButtonStyle::Secondary, None, Some(" "));
+                    make_button(action_row, format!("minicact_X_numpad_{:02}_{}", game.index(), i), ButtonStyle::Secondary, None, Some(" "));
                 } else {
-                    make_button(action_row, format!("minicact_numpad_{}", i), ButtonStyle::Primary, Some(NUMBER_EMOJI[i as usize]), None);
+                    make_button(action_row, format!("minicact_numpad_{:02}_{}", game.index(), i), ButtonStyle::Primary, Some(NUMBER_EMOJI[i as usize]), None);
                 }
             }
             action_row
@@ -51,16 +51,16 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game, rec
                 // ugliest nest of if statements ever... but functional!
                 // update: this is not even the ugliest nest of if statements in this project anymore. See minicact_component().
 
-                // if payout is true, then recommendation is guaranteed to be valid.
+                // if payout is true, then recommendation is guaranteed to be valid (i.e. not 255).
                 let payout_style = if payout && POSITION_LINE_TABLE[recommendation][i as usize] {ButtonStyle::Success} else {ButtonStyle::Secondary};
                 if let Some(k) = game.used_positions().iter().position(|a| a == &i) {  // if the game is using position i already.
-                    make_button(action_row, format!("minicact_X_game_{}", i), 
+                    make_button(action_row, format!("minicact_X_game_{:02}_{}", game.index(), i), 
                     payout_style, 
                     Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);  // the emoji corresponding to the number at position i.
                 } else if payout{
-                    make_button(action_row, format!("minicact_X_game_{}", i), payout_style, Some("🟡"), None);
+                    make_button(action_row, format!("minicact_X_game_{:02}_{}", game.index(), i), payout_style, Some("🟡"), None);
                 } else {
-                    make_button(action_row, format!("minicact_game_{}", i), 
+                    make_button(action_row, format!("minicact_game_{:02}_{}", game.index(), i), 
                     if i as usize == recommendation {ButtonStyle::Success} else {ButtonStyle::Primary}, 
                     Some("🟡"), None);
                 }
@@ -71,10 +71,10 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game, rec
     components
 }
 
-pub fn make_payout_dropdown<'a>(components: &'a mut CreateComponents) -> &'a mut CreateComponents {
+pub fn make_payout_dropdown<'a>(components: &'a mut CreateComponents, game: &Game) -> &'a mut CreateComponents {
     components.create_action_row(|action_row| {
         action_row.create_select_menu(|menu| {
-            menu.custom_id("minicact_payouts")
+            menu.custom_id(format!("minicact_payouts_{:02}__", game.index())) // double underscore at the end so the index is the same number of characters from the end.
                 .placeholder("Enter your payout!")
                 .options(|options| {
                     for i in 1..17 {
