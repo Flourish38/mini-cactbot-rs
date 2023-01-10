@@ -27,7 +27,7 @@ pub fn create_commands(commands: &mut CreateApplicationCommands) -> &mut CreateA
 
 async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> Result<(), SerenityError> { 
     let mut active_games = ACTIVE_GAMES.lock().await;
-    if active_games.contains_key(&command.user.id) {
+    if active_games.contains_key(&command.user.id) {  // if user has an active game already, warn them so they don't lose any data unintentionally.
         return command.create_interaction_response(&ctx.http, |response| {
             response.kind(InteractionResponseType::ChannelMessageWithSource)
                 .interaction_response_data(|message| {
@@ -42,6 +42,7 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction) -> R
                 })
         }).await
     }
+    // Otherwise, we're good to go! Just make the default board.
     let game = Game::new();
     command.create_interaction_response(&ctx.http, |response| {
         response.kind(InteractionResponseType::ChannelMessageWithSource)

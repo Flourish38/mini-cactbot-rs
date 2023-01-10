@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use crate::minicact::game::payout::Payout::*;
 
+// All possible payouts. These aren't really used other than compressing the size of a Game by 4 bytes, and a couple conversions.
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Payout {
     NoPayout,
@@ -23,8 +24,11 @@ pub enum Payout {
     _10000
 }
 
+// What the value of each Payout is, as a number.
 pub const PAYOUT_VALUES: [u16; 17] = [0, 36, 54, 72, 80, 108, 119, 144, 180, 252, 306, 360, 720, 1080, 1800, 3600, 10000];
 
+// each of these is ONE LESS than an INDEX of the PAYOUT_VALUES array.
+// Except for the first 3, since they should be unreachable. I chose 22 because it would stand out, i.e. "how is it 22?? oh."
 pub const PAYOUTS: [usize; 22] = [22, 22, 22, 15, 0, 11, 10, 3, 8, 4, 2, 1, 7, 2, 7, 5, 0, 9, 12, 6, 13, 14];
 
 // TIL that this gets you ToString for free
@@ -37,6 +41,8 @@ impl Display for Payout {
     }
 }
 
+// This is used because components return strings, sooo... gotta parse that result somehow!
+// This is also why the 10k/10000 is different from Display.
 impl From<&String> for Payout {
     fn from (n: &String) -> Self {
         match n.as_str() {

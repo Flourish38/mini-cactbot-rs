@@ -1,11 +1,14 @@
 use smallset::SmallSet;
 
+// A Board, to be used for computation. Usually, you will want this to be mutable.
 pub struct Board {
     pub state: [u8; 9],
+    // A SmallSet is used for easy removing and re-adding of one number at a time.
     pub unused_nums: SmallSet<[u8; 9]>
 }
 
 // all 8 board state transformations that preserve all relevant properties.
+// This could probably be an enum somehow, but it doesn't really matter.
 const DO_NOTHING: [usize; 9] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const ROTATE_LEFT: [usize; 9] = [2, 5, 8, 1, 4, 7, 0, 3, 6];
 const ROTATE_RIGHT: [usize; 9] = [6, 3, 0, 7, 4, 1, 8, 5, 2];

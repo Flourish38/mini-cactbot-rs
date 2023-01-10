@@ -7,6 +7,7 @@ use super::game::payout::*;
 use serenity::builder::CreateComponents;
 use serenity::model::prelude::component::ButtonStyle;
 
+// damn, I miss one-indexing... Julia my beloved D:
 const NUMBER_EMOJI: [&'static str; 9] = [
     "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣"
 ];
@@ -48,11 +49,14 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game, rec
             for i in (3*j)..(3*j+3) {
                 let payout = matches!(game.next_action(), EnterPayout(_));
                 // ugliest nest of if statements ever... but functional!
+                // update: this is not even the ugliest nest of if statements in this project anymore. See minicact_component().
+
+                // if payout is true, then recommendation is guaranteed to be valid.
                 let payout_style = if payout && POSITION_LINE_TABLE[recommendation][i as usize] {ButtonStyle::Success} else {ButtonStyle::Secondary};
-                if let Some(k) = game.used_positions().iter().position(|a| a == &i) {
+                if let Some(k) = game.used_positions().iter().position(|a| a == &i) {  // if the game is using position i already.
                     make_button(action_row, format!("minicact_X_game_{}", i), 
                     payout_style, 
-                    Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);
+                    Some(NUMBER_EMOJI[game.used_numbers()[k] as usize]), None);  // the emoji corresponding to the number at position i.
                 } else if payout{
                     make_button(action_row, format!("minicact_X_game_{}", i), payout_style, Some("🟡"), None);
                 } else {
@@ -90,6 +94,7 @@ pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> 
     let action = game.last_action();
     components.create_action_row(|action_row| {
         match action {
+            // If user just started, obviously can't undo anything.
             Start => make_button(action_row, "minicact_X_undo", ButtonStyle::Secondary, Some("↩"), None),
             _ => make_button(action_row, "minicact_undo", ButtonStyle::Primary, Some("↩"), None)
         };
@@ -97,7 +102,7 @@ pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> 
             ChoosePosition(pos) => make_button(action_row, "minicact_X_last_input", ButtonStyle::Secondary, Some(POSITION_EMOJI[pos as usize]), None),
             RevealNumber(num) => make_button(action_row, "minicact_X_last_input", ButtonStyle::Secondary, Some(NUMBER_EMOJI[num as usize]), None),
             EnterPayout(p) => {
-                if let Done = game.next_action() {
+                if let Done = game.next_action() {  // Hey look, the user just took their last action!! Enable the button, which will confirm that they are done.
                     make_button(action_row, "minicact_last_input", ButtonStyle::Success, None, Some(p.to_string().as_str()))
                 } else {
                     make_button(action_row, "minicact_X_last_input", ButtonStyle::Secondary, None, Some(p.to_string().as_str()))

@@ -29,20 +29,25 @@ pub async fn startup() {
     };
     println!("{:?}\t Computing all possible boards...", Local::now());
     let mut now = Instant::now();
+    // This puts all of the things it computes into the dictionary and returns something that needs a little more computation.
+    // explained better in computations.rs
     let (n, data) = compute_best_uncover(&mut board).await;
     let mut elapsed = now.elapsed();
     let precomputed_boards = PRECOMPUTED_BOARDS.lock().await;
     println!("{:?}\t Computed {} board states in {:.2?}.", Local::now(), precomputed_boards.len(), elapsed);
     drop(precomputed_boards);
+    // time to compute the probability of any given payout BEFORE you buy your scratch ticket, with optimal play.
     let mut p_data = [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.];
     for i in 0..16 {
         p_data[i] = (data[i] as f64) / (n as f64);
     }
     let mut daily_payout_dist = DAILY_PAYOUT_DIST.lock().await;
+    // now, we just need to ""cube"" that probability distribution, to get all the combinations that give any given payout for the day.
     now = Instant::now();
     for i in 0..16 {
         for j in 0..16 {
-            for k in 0..16{
+            for k in 0..16 {
+                // The key is the value, so we can get the percentile from the payout.
                 let key = PAYOUT_VALUES[i+1] + PAYOUT_VALUES[j+1] + PAYOUT_VALUES[k+1];
                 let oldvalue = daily_payout_dist.get(&key).unwrap_or(&0.).clone();
                 daily_payout_dist.insert(key, p_data[i]*p_data[j]*p_data[k] + oldvalue);

@@ -31,7 +31,7 @@ pub async fn handle_component(ctx: Context, component: MessageComponentInteracti
 }
 
 async fn disabled_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
-    let content = if component.message.content.ends_with("🔄") {
+    let content = if component.message.content.ends_with("🔄") {  // The user already hit a disabled button last time.
         component.message.content.clone()
     } else {
         format!("{}\n{} That button is currently disabled. If you made a mistake, press `Undo` ↩ / `Reset` 🔄", component.message.content, component.user.mention())
@@ -41,14 +41,14 @@ async fn disabled_component(ctx: Context, component: MessageComponentInteraction
             .interaction_response_data(|message| {
                 message.content(content)
             })
-    }).await.into()
+    }).await
 }
 
 async fn create_minicact_response<'a>(component: &MessageComponentInteraction, ctx: &Context, game: &Game) -> Result<(), SerenityError> {
     let action = game.next_action();
     let (recommendation, content) = if let ChoosePosition(_) = action {
         match game.last_action() {
-            EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()),
+            EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()), // Can't recommend, haven't seen the first tile yet!
             _ => recommend_position(&game).await
         }
         
@@ -71,7 +71,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
                             ChoosePosition(_) => {make_game_rows(components, &game, recommendation);},
                             RevealNumber(_) => {make_numpad_rows(components, &game);},
                             EnterPayout(_) => {make_game_rows(components, &game, recommendation); make_payout_dropdown(components);},
-                            _ => ()
+                            _ => ()  // in the Done case, this means that only the reset_bar will be printed. It handles this specially.
                         }
                         make_reset_bar(components, &game)
                     })  
@@ -84,6 +84,7 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
     let action = game.next_action();
     // This is not fun but it never panics!
+    // It was genuinely a massive pain to do this with no .unwrap().
     match action {
         RevealNumber(_) | ChoosePosition(_) => {
             let num = component.data.custom_id.chars().last()
@@ -102,7 +103,10 @@ async fn minicact_component(ctx: Context, component: MessageComponentInteraction
         },
         _ => println!("{:?}\t User {} with Id {} desynced on action {:?}. Resyncing...", Local::now(), component.user.name, component.user.id, action)
     }
+    // conveniently, even if the user "desyncs" somehow, calling create_minicact_response will show them the correct game state.
+    // Unfortunately, this does not catch desyncs by 2 steps, since you will still just be entering a number.
 
+    // Now that we have either mutated the board (or not), time to show the user!
     create_minicact_response(&component, &ctx, game).await
 }
 
@@ -120,6 +124,7 @@ async fn undo_component(ctx: Context, component: MessageComponentInteraction) ->
     create_minicact_response(&component, &ctx, game).await
 }
 
+// note that the only time this component IS NOT disabled (i.e. calls disabled_component instead) is when the user has played ALL 3 games.
 async fn last_input_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
@@ -142,10 +147,13 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
 }
 
 // Don't want to recompile the regex every time, so I made it a static
+// Regex that just matches a number surrounded by whitespace, with possible decimal point.
+// It technically also matches a period, but all periods in the relevant message are not surrounded by whitespace so it is ok. 
 lazy_static!{static ref MINICACT_REGEX: Regex = Regex::new(r"\s([\d.]+)\s").expect("MINICACT_REGEX errored on creation???????"); }
 
 async fn announce_results_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut captures = MINICACT_REGEX.captures_iter(component.message.content.as_str());
+    // These use a regex to find the data in the message, since it should already be there. No need to recompute it!
     let total = captures.next().and_then(|x| x.get(1)).ok_or(SerenityError::Other("Couldn't find total in results message!!"))?.as_str();
     let percentile = captures.next().and_then(|x| x.get(1)).ok_or(SerenityError::Other("Couldn't find percentile in results message!!"))?.as_str();
     component.create_interaction_response(&ctx.http, |response|{
@@ -159,6 +167,8 @@ async fn announce_results_component(ctx: Context, component: MessageComponentInt
     }).await?;
     Ok(())
 }
+
+// These are both used in the case that the user typed /minicact_play and they already had a game started.
 
 async fn restore_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let active_games = ACTIVE_GAMES.lock().await;
@@ -174,6 +184,8 @@ async fn full_reset_component(ctx: Context, component: MessageComponentInteracti
     }
     create_minicact_response(&component, &ctx, game).await
 }
+
+// These are necessary in case the user pushed a component but they did not have a game started.
 
 async fn handle_game_mut<'a>(maybe_game: Option<&'a mut Game>, component: &MessageComponentInteraction, ctx: &Context) -> Result<&'a mut Game, SerenityError> {
     match maybe_game {
@@ -197,11 +209,12 @@ async fn handle_game<'a>(maybe_game: Option<&'a Game>, component: &MessageCompon
     }
 }
 
+// In the case that the user does not have a game, this lets them know to start a new one instead.
 async fn removed_game_response(component: &MessageComponentInteraction, ctx: &Context) -> Result<(), SerenityError> {
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
             .interaction_response_data(|message| {
-                message.content(format!("{} Your game is no longer being tracked, meaning that either you completed it elsewhere or the bot restarted.\nFeel free to dismiss this message.", component.user.mention()))
+                message.content(format!("{} Your game is no longer being tracked, meaning that either you completed it elsewhere or the bot restarted.\nFeel free to dismiss this message. Use /minicact_play to start a new game.", component.user.mention()))
                     .components(|components| { components })  
             })
     }).await

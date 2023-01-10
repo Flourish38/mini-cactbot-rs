@@ -20,6 +20,7 @@ lazy_static! { pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex
 
 lazy_static! { pub static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, (usize, [u32; 16])>> = Mutex::new(HashMap::new()); }
 
+// This keeps track of the game state for a user. Each scratch ticket takes up 1/3 of each array, for 3 tickets total.
 pub struct Game {
     index: u8,
     position_history: [u8; 12],
@@ -46,10 +47,13 @@ impl Game{
         }
     }
 
+    // got tired of writing self.index as usize
     fn index(&self) -> usize {
         self.index.into()
     }
 
+    // Which action the game is expecting next.
+    // Tells the bot which buttons to generate.
     pub fn next_action(&self) -> Action {
         let i = self.index();
         if i == 12 && self.payout_history[2] != NoPayout {
@@ -63,6 +67,7 @@ impl Game{
         }
     }
 
+    // Which action was previously taken.
     pub fn last_action(&self) -> Action {
         let i = self.index();
         if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 255) {
@@ -76,6 +81,9 @@ impl Game{
         }
     }
 
+    // note that these do not actually check that the game is in the correct state before setting.
+    // Fortunately, the worst case is just overwriting a previous action.
+    
     pub fn set_position(&mut self, position: u8) {
         self.position_history[self.index()] = position;
     }
@@ -89,6 +97,7 @@ impl Game{
         self.payout_history[self.index()/4 - 1] = payout;
     }
 
+    // Undoes one action.
     pub fn undo(&mut self) {
         let i = self.index();
         match self.last_action() {
@@ -120,6 +129,7 @@ impl Game{
         output
     }
 
+    // note that this only resets ONE SCRATCH TICKET. If you want to fully reset, you will need to click 3 times.
     pub fn reset(&mut self) {
         self.undo();
         while let Done | ChoosePosition(_) | RevealNumber(_) = self.last_action() {
@@ -127,6 +137,7 @@ impl Game{
         }
     }
 
+    // converts the game to a Board for computation.
     pub fn as_board(&self) -> Board {
         let mut state: [u8; 9] = [255, 255, 255, 255, 255, 255, 255, 255, 255];
         let nums = self.used_numbers();
@@ -135,7 +146,7 @@ impl Game{
             state[pos[i] as usize] = nums[i];
         }
         let unused_nums: SmallSet<[u8; 9]> = (0..9).into_iter().filter(|&x| !self.used_numbers().contains(&x)).collect();
-        Board { state: state, unused_nums: unused_nums}
+        Board { state: state, unused_nums: unused_nums }
     }
 }
 
