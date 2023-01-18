@@ -100,7 +100,7 @@ async fn main() {
     *CONFIG.lock().await = config;
 
     // Build our client.
-    let mut client = Client::builder(token, GatewayIntents::empty())
+    let mut client = Client::builder(token.clone(), GatewayIntents::empty())
         .event_handler(Handler)
         .await
         .expect("Error creating client");
@@ -129,7 +129,7 @@ async fn main() {
 
     // Start the client.
     match client.start().await {
-        Err(why) => println!("{:?}\t Client error: {}", Local::now(), why),
+        Err(why) => println!("{:?}\t Client error: {}. Double-check your token, which is currently \"{}\".", Local::now(), why, token),
         Ok(_) => println!("{:?}\t Client shutdown cleanly", Local::now())
     }
     
