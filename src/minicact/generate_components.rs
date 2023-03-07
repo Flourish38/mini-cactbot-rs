@@ -32,7 +32,7 @@ pub fn make_numpad_rows<'a>(components: &'a mut CreateComponents, game: &Game) -
         components.create_action_row(|action_row| {
             for i in (3*j)..(3*j+3) {
                 if game.used_numbers().contains(&i) {
-                    make_button(action_row, format!("minicact_X_numpad_{:02}_{}", game.index(), i), ButtonStyle::Secondary, None, Some(" "));
+                    make_button(action_row, format!("minicact_X_numpad_{:02}_{}", game.index(), i), ButtonStyle::Secondary, None, None);
                 } else {
                     make_button(action_row, format!("minicact_numpad_{:02}_{}", game.index(), i), ButtonStyle::Primary, Some(NUMBER_EMOJI[i as usize]), None);
                 }
