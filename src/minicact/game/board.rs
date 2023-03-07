@@ -10,8 +10,8 @@ pub struct Board {
 // all 8 board state transformations that preserve all relevant properties.
 // This could probably be an enum somehow, but it doesn't really matter.
 const DO_NOTHING: [usize; 9] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-const ROTATE_LEFT: [usize; 9] = [2, 5, 8, 1, 4, 7, 0, 3, 6];
-const ROTATE_RIGHT: [usize; 9] = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+const ROTATE_LEFT: [usize; 9] = [2, 5, 8, 1, 4, 7, 0, 3, 6];  // tHeSe aRe tHe oNlY 2 OpErAtIoNs tHaT ArEn't tHeIr oWn iNvErSe. WhO KnEw 😡😡😡
+const ROTATE_RIGHT: [usize; 9] = [6, 3, 0, 7, 4, 1, 8, 5, 2];  // For some reason I thought that I needed to use the reverse operations for computing the recommendations, which was a terrible bug to track down because it only affected these two operations...
 const ROTATE_180: [usize; 9] = [8, 7, 6, 5, 4, 3, 2, 1, 0];
 const FLIP_HORIZONTAL: [usize; 9] = [2, 1, 0, 5, 4, 3, 8, 7, 6];
 const FLIP_VERTICAL: [usize; 9] = [6, 7, 8, 3, 4, 5, 0, 1, 2];
@@ -25,7 +25,7 @@ fn min_4(x1: u8, x2: u8, x3: u8, x4: u8) -> u8 {
 impl Board {
     // processes the board so it will always be in the same orientation.
     // This reduces the number of precomputed boards by a factor of something >5.
-    // Also returns the inverse operation needed to reverse the transformation.
+    // Also returns the operation used to transform the board.
     pub fn simplify(&self) -> (Board, &[usize; 9]) {
         let state = &self.state;
         // hell
@@ -65,11 +65,7 @@ impl Board {
         for i in 0..9 {
             output[i] = state[operation[i]];
         }
-        (Board { state: output, unused_nums: self.unused_nums.clone() }, match operation {
-            &ROTATE_LEFT => &ROTATE_RIGHT,  // these are the only 2 operations that aren't their own inverse. who knew
-            &ROTATE_RIGHT => &ROTATE_LEFT,
-            o => o
-        })
+        (Board { state: output, unused_nums: self.unused_nums.clone() }, operation)
     }
 
     // compresses the board state into a u32. The format is 9 bits of a mask for each position, then 7 unused bits, 
