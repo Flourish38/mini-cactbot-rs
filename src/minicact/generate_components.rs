@@ -109,7 +109,7 @@ pub fn make_reset_bar<'a>(components: &'a mut CreateComponents, game: &Game) -> 
                 }
                 
             },
-            _ => make_button(action_row, "minicact_X_last_input", ButtonStyle::Secondary, None, Some(" "))
+            _ => make_button(action_row, "minicact_X_last_input", ButtonStyle::Secondary, None, None)
         };
         make_button(action_row, "minicact_reset", ButtonStyle::Primary, Some("🔄"), None)
     })
