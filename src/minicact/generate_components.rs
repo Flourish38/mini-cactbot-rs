@@ -81,21 +81,21 @@ pub fn make_game_rows<'a>(components: &'a mut CreateComponents, game: &Game, rec
                 } else if payout{
                     make_button(action_row, 
                         format!("minicact_X_game_{:02}_{}", game.index(), i), 
-                        ButtonStyle::Primary, 
+                        payout_style, 
                         Some("🟡"), 
                         None, 
                         true);
                 } else {
                     make_button(action_row, 
                         format!("minicact_game_{:02}_{}", game.index(), i), 
-                    match i{
-                        _ if i as usize == recommendation => ButtonStyle::Success,
-                        _ if i == chosen_i => ButtonStyle::Secondary,
-                        _ => ButtonStyle::Primary
-                    }, 
-                    Some("🟡"), 
-                    None,
-                false);
+                        match i{
+                            _ if i as usize == recommendation => ButtonStyle::Success,
+                            _ if i == chosen_i => ButtonStyle::Secondary,
+                            _ => ButtonStyle::Primary
+                        }, 
+                        Some("🟡"), 
+                        None,
+                        false);
                 }
             }
             action_row
