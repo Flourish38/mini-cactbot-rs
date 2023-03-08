@@ -64,7 +64,7 @@ async fn help_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         response.kind(InteractionResponseType::ChannelMessageWithSource)
             .interaction_response_data(|data| {
                 data.ephemeral(true)
-                    .content("Currently available commands: `/ping`, `/shutdown`, `/help`, `/minicact_play`.")
+                    .content("Currently available commands: `/ping`, `/shutdown`, `/help`, `/minicact_play`, `/minicact_simulate`.")
             })
     }).await
     // for some reason you can't delete ephemeral interaction responses so I guess I'll just suffer
@@ -85,7 +85,7 @@ async fn ping_command(ctx: Context, command: ApplicationCommandInteraction) -> R
         .components(|components| {
             components
                 .create_action_row(|action_row| {
-                    make_button(action_row, "ping_refresh", ButtonStyle::Secondary, Some("🔄"), None)
+                    make_button(action_row, "ping_refresh", ButtonStyle::Secondary, Some("🔄"), None, false)
                 })
         })
     }).await?;

@@ -143,7 +143,7 @@ async fn undo_component(ctx: Context, component: MessageComponentInteraction) ->
     create_minicact_response(&component, &ctx, game, false).await
 }
 
-// note that the only time this component IS NOT disabled (i.e. calls disabled_component instead) is when the user has played ALL 3 games.
+// note that the only time this component IS NOT disabled is when the user has played ALL 3 games.
 async fn last_input_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
     let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
@@ -151,6 +151,7 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
     let daily_payout_dist = DAILY_PAYOUT_DIST.lock().await;
     let percentile = daily_payout_dist.get(&total).ok_or(SerenityError::Other("Somehow total payout is not in daily_payout_dist??"))?.clone();
     drop(daily_payout_dist);
+    let simulated = game.is_simulated();
     active_games.remove(&component.user.id);
     component.create_interaction_response(&ctx.http, |response|{
         response.kind(InteractionResponseType::UpdateMessage)
@@ -158,7 +159,12 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
                 message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP, which is {:.2} percentile.", total, percentile))
                     .components(|components| {
                         components.create_action_row(|action_row| {
-                            make_button(action_row, "minicact_announce_results", ButtonStyle::Primary, Some("📢"), Some(" Announce your results!"))
+                            make_button(action_row, 
+                                "minicact_announce_results", 
+                                ButtonStyle::Primary, 
+                                Some("📢"), 
+                                if simulated {Some(" Can't announce simulated games.")} else {Some(" Announce your results!")}, 
+                                simulated)
                         })
                     })  
             })

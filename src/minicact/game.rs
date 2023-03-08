@@ -26,6 +26,7 @@ pub struct Game {
     position_history: [u8; 12],
     number_history: [u8; 12],
     payout_history: [Payout; 3],
+    simulated: bool
 }
 
 #[derive(Debug)]
@@ -43,13 +44,28 @@ impl Game{
             index: 0,
             position_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             number_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
-            payout_history: [NoPayout, NoPayout, NoPayout], 
+            payout_history: [NoPayout, NoPayout, NoPayout],
+            simulated: false
+        }
+    }
+
+    pub fn new_simulated() -> Game{
+        Game {
+            index: 0,
+            position_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            number_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
+            payout_history: [NoPayout, NoPayout, NoPayout],
+            simulated: true
         }
     }
 
     // got tired of writing self.index as usize
     pub fn index(&self) -> usize {
         self.index.into()
+    }
+
+    pub fn is_simulated(&self) -> bool {
+        self.simulated
     }
 
     // Which action the game is expecting next.
