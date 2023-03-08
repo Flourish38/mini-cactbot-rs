@@ -25,7 +25,8 @@ pub async fn handle_component(ctx: Context, component: MessageComponentInteracti
         "minicact_last_input" => last_input_component(ctx, component).await,
         "minicact_announce_results" => announce_results_component(ctx, component).await,
         "minicact_restore" => restore_component(ctx, component).await,
-        "minicact_full_reset" => full_reset_component(ctx, component).await,
+        s if s.starts_with("minicact_full_reset") => full_reset_component(ctx, component).await,
+        "minicact_restart_simulation" => restart_simulation_component(ctx, component).await,
         _ => minicact_component(ctx, component).await
     }
 }
@@ -159,12 +160,22 @@ async fn last_input_component(ctx: Context, component: MessageComponentInteracti
                 message.content(format!("Thanks for using this bot! Feel free to dismiss this message.\nYour total payout is {} MGP, which is {:.2} percentile.", total, percentile))
                     .components(|components| {
                         components.create_action_row(|action_row| {
-                            make_button(action_row, 
-                                "minicact_announce_results", 
-                                ButtonStyle::Primary, 
-                                Some("📢"), 
-                                if simulated {Some(" Can't announce simulated games.")} else {Some(" Announce your results!")}, 
-                                simulated)
+                            if simulated {
+                                make_button(action_row, 
+                                    "minicact_restart_simulation", 
+                                    ButtonStyle::Primary, 
+                                    Some("🔄"), 
+                                    Some(" Play again?"), 
+                                    false)
+                            } else {
+                                make_button(action_row, 
+                                    "minicact_announce_results", 
+                                    ButtonStyle::Primary, 
+                                    Some("📢"), 
+                                    Some(" Announce your results!"), 
+                                    false)
+                            }
+                            
                         })
                     })  
             })
@@ -203,11 +214,46 @@ async fn restore_component(ctx: Context, component: MessageComponentInteraction)
 
 async fn full_reset_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
     let mut active_games = ACTIVE_GAMES.lock().await;
-    let game = handle_game_mut(active_games.get_mut(&component.user.id), &component, &ctx).await?;
-    while !matches!(game.last_action(), Start) {
-        game.reset();
+    let game = if component.data.custom_id.contains("sim") {Game::new_simulated()} else {Game::new()};
+    create_minicact_response(&component, &ctx, &game, false).await?;
+    active_games.insert(component.user.id, game);
+    Ok(())
+}
+
+async fn restart_simulation_component(ctx: Context, component: MessageComponentInteraction) -> Result<(), SerenityError> {
+    let mut active_games = ACTIVE_GAMES.lock().await;
+    if active_games.contains_key(&component.user.id) {  // if user has an active game already, warn them so they don't lose any data unintentionally.
+        return component.create_interaction_response(&ctx.http, |response| {
+            response.kind(InteractionResponseType::UpdateMessage)
+                .interaction_response_data(|message| {
+                    message.content(format!("{} you already have a game started.\nWould you like to:\n> ↩ Restore your previous game\n> 🔄 Discard it and start from scratch", component.user.mention()))
+                        .ephemeral(true)
+                        .components(|components| {
+                            components.create_action_row(|action_row| {
+                                make_button(action_row, "minicact_restore", ButtonStyle::Primary, Some("↩"), Some(" Restore"), false);
+                                make_button(action_row, "minicact_full_reset_sim", ButtonStyle::Primary, Some("🔄"), Some(" Discard"), false)
+                            })
+                        })
+                })
+        }).await
     }
-    create_minicact_response(&component, &ctx, game, false).await
+    // Otherwise, we're good to go! Just make the default board.
+    let game = Game::new_simulated();
+    component.create_interaction_response(&ctx.http, |response| {
+        response.kind(InteractionResponseType::UpdateMessage)
+            .interaction_response_data(|message| {
+                message.content("Enter the already revealed tile:")
+                    .ephemeral(true)
+                    .components(|components| {
+                        make_game_rows(components, &game, 255);
+                        make_reset_bar(components, &game)
+                    })
+            })
+    }).await?;
+    // Rust is a beautiful language...
+    // I have to make sure that the message returns successfully before I can put the game into active_games.
+    active_games.insert(component.user.id, game);
+    Ok(())
 }
 
 // These are necessary in case the user pushed a component but they did not have a game started.

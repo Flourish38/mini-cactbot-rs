@@ -41,7 +41,12 @@ async fn play_command(ctx: Context, command: ApplicationCommandInteraction, simu
                         .components(|components| {
                             components.create_action_row(|action_row| {
                                 make_button(action_row, "minicact_restore", ButtonStyle::Primary, Some("↩"), Some(" Restore"), false);
-                                make_button(action_row, "minicact_full_reset", ButtonStyle::Primary, Some("🔄"), Some(" Discard"), false)
+                                make_button(action_row, 
+                                    format!("minicact_full_reset{}", if simulate {"_sim"} else {""}), 
+                                    ButtonStyle::Primary, 
+                                    Some("🔄"), 
+                                    Some(" Discard"), 
+                                    false)
                             })
                         })
                 })
