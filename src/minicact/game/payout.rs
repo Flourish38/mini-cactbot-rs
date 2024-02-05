@@ -47,7 +47,7 @@ impl From<&String> for Payout {
     fn from (n: &String) -> Self {
         match n.as_str() {
             "36" => _36,
-            "52" => _54,
+            "54" => _54,
             "72" => _72,
             "80" => _80,
             "108" => _108,
