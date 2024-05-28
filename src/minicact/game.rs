@@ -1,14 +1,14 @@
-pub mod payout;
 pub mod board;
 pub mod computations;
+pub mod payout;
 
 use std::collections::HashMap;
 
 use Action::*;
 
-use payout::*;
-use payout::Payout::*;
 use board::*;
+use payout::Payout::*;
+use payout::*;
 
 use serenity::model::id::UserId;
 use serenity::prelude::*;
@@ -16,9 +16,9 @@ use serenity::prelude::*;
 use lazy_static::lazy_static;
 use smallset::SmallSet;
 
-lazy_static! { pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex::new(HashMap::new()); }
-
-lazy_static! { pub static ref PRECOMPUTED_BOARDS: Mutex<HashMap<u32, (usize, [u32; 16])>> = Mutex::new(HashMap::new()); }
+lazy_static! {
+    pub static ref ACTIVE_GAMES: Mutex<HashMap<UserId, Game>> = Mutex::new(HashMap::new());
+}
 
 // This keeps track of the game state for a user. Each scratch ticket takes up 1/3 of each array, for 3 tickets total.
 pub struct Game {
@@ -26,7 +26,7 @@ pub struct Game {
     position_history: [u8; 12],
     number_history: [u8; 12],
     payout_history: [Payout; 3],
-    simulated: bool
+    simulated: bool,
 }
 
 #[derive(Debug)]
@@ -35,27 +35,27 @@ pub enum Action {
     ChoosePosition(u8),
     RevealNumber(u8),
     EnterPayout(Payout),
-    Done
+    Done,
 }
 
-impl Game{
+impl Game {
     pub fn new() -> Game {
         Game {
             index: 0,
             position_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             number_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             payout_history: [NoPayout, NoPayout, NoPayout],
-            simulated: false
+            simulated: false,
         }
     }
 
-    pub fn new_simulated() -> Game{
+    pub fn new_simulated() -> Game {
         Game {
             index: 0,
             position_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             number_history: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255],
             payout_history: [NoPayout, NoPayout, NoPayout],
-            simulated: true
+            simulated: true,
         }
     }
 
@@ -74,7 +74,7 @@ impl Game{
         let i = self.index();
         if i == 12 && self.payout_history[2] != NoPayout {
             Done
-        } else if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] == NoPayout {
+        } else if i > 0 && i % 4 == 0 && self.payout_history[i / 4 - 1] == NoPayout {
             EnterPayout(NoPayout)
         } else if self.position_history[i] != 255 {
             RevealNumber(255)
@@ -86,21 +86,25 @@ impl Game{
     // Which action was previously taken.
     pub fn last_action(&self) -> Action {
         let i = self.index();
-        if i > 0 && i % 4 == 0 && self.payout_history[i/4 - 1] != NoPayout && (i == 12 || self.position_history[i] == 255) {
-            EnterPayout(self.payout_history[i/4 - 1])
+        if i > 0
+            && i % 4 == 0
+            && self.payout_history[i / 4 - 1] != NoPayout
+            && (i == 12 || self.position_history[i] == 255)
+        {
+            EnterPayout(self.payout_history[i / 4 - 1])
         } else if i < 12 && self.position_history[i] != 255 {
             ChoosePosition(self.position_history[i])
         } else if i == 0 {
             Start
         } else {
-            RevealNumber(self.number_history[i-1])
+            RevealNumber(self.number_history[i - 1])
         }
     }
 
     // note that these do not actually check that the game is in the correct state before setting.
     // Fortunately, the worst case is just overwriting a previous action.
     // edit: the worst case is actually having multiple of the same number, which can cause panics.
-    
+
     pub fn set_position(&mut self, position: u8) {
         self.position_history[self.index()] = position;
     }
@@ -110,32 +114,40 @@ impl Game{
         self.index += 1;
     }
 
-    pub fn set_payout(&mut self, payout: Payout){
-        self.payout_history[self.index()/4 - 1] = payout;
+    pub fn set_payout(&mut self, payout: Payout) {
+        self.payout_history[self.index() / 4 - 1] = payout;
     }
 
     // Undoes one action.
     pub fn undo(&mut self) {
         let i = self.index();
         match self.last_action() {
-            EnterPayout(_) => self.payout_history[i/4 - 1] = NoPayout,
+            EnterPayout(_) => self.payout_history[i / 4 - 1] = NoPayout,
             ChoosePosition(_) => self.position_history[i] = 255,
             RevealNumber(_) => {
-                self.number_history[i-1] = 255;
+                self.number_history[i - 1] = 255;
                 self.index -= 1
-            },
-            _ => ()
+            }
+            _ => (),
         };
     }
 
     pub fn used_numbers(&self) -> &[u8] {
         let i = self.index();
-        &self.number_history[(if let EnterPayout(_) = self.next_action() {i - 4} else {i - i%4})..i]
+        &self.number_history[(if let EnterPayout(_) = self.next_action() {
+            i - 4
+        } else {
+            i - i % 4
+        })..i]
     }
 
     pub fn used_positions(&self) -> &[u8] {
         let i = self.index();
-        &self.position_history[(if let EnterPayout(_) = self.next_action() {i - 4} else {i - i%4})..i]
+        &self.position_history[(if let EnterPayout(_) = self.next_action() {
+            i - 4
+        } else {
+            i - i % 4
+        })..i]
     }
 
     pub fn total_payout(&self) -> u16 {
@@ -162,8 +174,13 @@ impl Game{
         for i in 0..pos.len() {
             state[pos[i] as usize] = nums[i];
         }
-        let unused_nums: SmallSet<[u8; 9]> = (0..9).into_iter().filter(|&x| !self.used_numbers().contains(&x)).collect();
-        Board { state: state, unused_nums: unused_nums }
+        let unused_nums: SmallSet<[u8; 9]> = (0..9)
+            .into_iter()
+            .filter(|&x| !self.used_numbers().contains(&x))
+            .collect();
+        Board {
+            state: state,
+            unused_nums: unused_nums,
+        }
     }
 }
-

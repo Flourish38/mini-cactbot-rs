@@ -52,7 +52,7 @@ async fn create_minicact_response<'a>(component: &MessageComponentInteraction, c
     let (recommendation, mut content) = if let ChoosePosition(_) = action {
         match game.last_action() {
             EnterPayout(_) | Start => (255 as usize, "Enter the already revealed tile:".to_string()), // Can't recommend, haven't seen the first tile yet!
-            _ => recommend_position(&game).await
+            _ => recommend_position(&game)
         }
         
     } else if let EnterPayout(_) = action {

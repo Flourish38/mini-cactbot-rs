@@ -12,6 +12,13 @@ config = "0.13.2"
 lazy_static = "1.4.0"
 rand = "0.8.5"
 regex = "1.6.0"
+phf = "0.11.1"
 serenity = { version = "0.11.5", default-features = false, features = ["client", "gateway", "rustls_backend", "model"] }
 smallset = "0.1.1"
 tokio = { version = "1.20.1", features = ["macros", "rt-multi-thread"] }
+
+[build-dependencies]
+phf = { version = "0.11.1", default-features = false }
+phf_codegen = "0.11.1"
+chrono = "0.4.23"
+smallset = "0.1.1"
